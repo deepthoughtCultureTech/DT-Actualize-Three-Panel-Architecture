@@ -20,12 +20,9 @@ export async function getProcessById(id: string) {
 }
 
 // Get all processes for a given admin
-export async function getProcessesByAdmin(adminId: string) {
+export async function getProcessesByAdmin() {
   const db = await connectDB();
-  return db
-    .collection<Process>("processes")
-    .find()
-    .toArray();
+  return db.collection<Process>("processes").find().toArray();
 }
 
 export async function getAllProcesses() {
@@ -147,11 +144,11 @@ export async function deleteRoundInstructionUpload(
     { _id: new ObjectId(processId) },
     {
       $pull: {
-        "rounds.$[round].uploads": { url: fileUrl }
-      } as any
+        "rounds.$[round].uploads": { url: fileUrl },
+      } as any,
     },
     {
-      arrayFilters: [{ "round._id": new ObjectId(roundId).toString() }]
+      arrayFilters: [{ "round._id": new ObjectId(roundId).toString() }],
     }
   );
 

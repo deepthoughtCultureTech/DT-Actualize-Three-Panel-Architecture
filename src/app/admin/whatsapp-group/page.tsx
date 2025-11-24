@@ -37,7 +37,8 @@ export default function WhatsAppGroupAdmin() {
           : [{ name: "", email: "", phone: "" }]
       );
     } catch (err) {
-      setError("Failed to load WhatsApp group data");
+      console.error("WhatsApp group save error:", err);
+      setError("Failed to save WhatsApp group info");
     } finally {
       setLoading(false);
     }
@@ -84,6 +85,7 @@ export default function WhatsAppGroupAdmin() {
       );
       alert("WhatsApp group info saved successfully!");
     } catch (err) {
+      console.error("WhatsApp group save error:", err);
       setError("Failed to save WhatsApp group info");
     } finally {
       setSaving(false);

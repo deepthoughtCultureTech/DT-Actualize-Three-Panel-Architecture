@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { verifyToken } from "@/utils/auth";
-import { ObjectId } from "mongodb";
 
 /**
  * GET - Retrieve global WhatsApp group and admins

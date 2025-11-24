@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, RefreshCw, Mail, Phone, User } from "lucide-react";
+import { AlertCircle, RefreshCw, Mail, User } from "lucide-react";
 
 export default function CandidateAuthPage() {
   const router = useRouter();

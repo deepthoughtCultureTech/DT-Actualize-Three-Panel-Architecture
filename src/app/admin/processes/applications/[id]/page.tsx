@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
 import {
@@ -9,7 +9,6 @@ import {
   Ban,
   RefreshCw,
   Unlock,
-  View,
   Eye,
 } from "lucide-react";
 import BlockDurationModal from "@/components/admin/BlockDurationModal";
@@ -170,7 +169,7 @@ export default function ApplicantsPage() {
   const router = useRouter();
   const { id } = useParams();
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
 
     try {
@@ -209,7 +208,7 @@ export default function ApplicantsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchData();
@@ -217,7 +216,7 @@ export default function ApplicantsPage() {
     // ✅ Auto-refresh every minute
     const interval = setInterval(fetchData, 60000);
     return () => clearInterval(interval);
-  }, [id]);
+  }, [fetchData]);
 
   // ✅ Open block modal
   const openBlockModal = (

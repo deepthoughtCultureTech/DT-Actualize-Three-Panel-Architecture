@@ -25,10 +25,6 @@ export default function RoundLayout({
   const [completedRounds, setCompletedRounds] = useState<
     { roundId: string; status: string }[]
   >([]);
-  // Per-round timeline map
-  const [roundTimelines, setRoundTimelines] = useState<
-    Record<string, string | null>
-  >({});
   const [timeline, setTimeline] = useState<string | null>(null);
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [showLockedModal, setShowLockedModal] = useState(false);
@@ -37,7 +33,7 @@ export default function RoundLayout({
     null
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [dataReady, setDataReady] = useState<Boolean>(false);
+  const [dataReady, setDataReady] = useState<boolean>(false);
   const [isWhatsAppGroupUnlocked, setIsWhatsAppGroupUnlocked] = useState(false);
 
   const router = useRouter();
@@ -80,7 +76,6 @@ export default function RoundLayout({
           currentApp.rounds.forEach((r: any) => {
             timelinesMap[r.roundId] = r.timeline || null;
           });
-          setRoundTimelines(timelinesMap);
 
           // Set timeline of current round if available
           setTimeline(timelinesMap[roundId] || null);
@@ -147,7 +142,7 @@ export default function RoundLayout({
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem("token");
-      let response = await fetch(
+      const response = await fetch(
         `/api/candidate/applications/${id}/round/${roundId}/timeline`,
         {
           method: "PATCH",
@@ -162,10 +157,6 @@ export default function RoundLayout({
         throw new Error("Failed to save timeline");
       }
 
-      setRoundTimelines((prev) => ({
-        ...prev,
-        [roundId]: data,
-      }));
       setTimeline(data);
       setShowTimelineModal(false);
     } catch (err) {
