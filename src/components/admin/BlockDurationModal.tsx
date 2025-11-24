@@ -74,7 +74,7 @@ export default function BlockDurationModal({
                   {candidateName}
                 </p>
                 <p className="text-xs text-orange-700 mt-1">
-                  Reason: Missed self-defined timeline deadline
+                  Reason: Missed self-defined timeline
                 </p>
               </div>
             </div>

@@ -58,8 +58,8 @@ export class CandidateService {
         const error: any = new Error("account_blocked");
         error.code = "ACCOUNT_BLOCKED";
         error.details = {
-          message: `Your account is temporarily blocked because you missed your self-defined timeline deadline.`,
-          reason: candidate.blockedReason || "Missed timeline deadline",
+          message: `Your account is temporarily blocked because you missed your self-defined timeline.`,
+          reason: candidate.blockedReason || "Missed timeline",
           blockedUntil: blockedUntil.toISOString(),
           timeRemaining: {
             hours: hoursRemaining,

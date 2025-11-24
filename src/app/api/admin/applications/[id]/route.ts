@@ -75,7 +75,7 @@ export async function GET(req: NextRequest, { params }: any) {
 }
 
 /**
- * Update application - Block candidate or change status
+ * Update application - Block candidate, unblock, or change status
  */
 export async function PATCH(req: NextRequest, { params }: any) {
   try {
@@ -118,36 +118,47 @@ export async function PATCH(req: NextRequest, { params }: any) {
         );
       }
 
+      const currentRoundIndex = application.currentRoundIndex;
+
+      // ✅ Clear timeline for current round only
+      const updatedRounds = application.rounds.map(
+        (round: any, index: number) => {
+          if (index === currentRoundIndex) {
+            return {
+              ...round,
+              timeline: null,
+              timelineDate: null,
+            };
+          }
+          return round;
+        }
+      );
+
       const now = new Date();
       const blockedUntil = new Date(
         now.getTime() + blockDurationHours * 60 * 60 * 1000
       );
 
-      // Block the candidate
+      // Block the candidate account
       await db.collection("candidates").updateOne(
         { _id: application.candidateId },
         {
           $set: {
-            isBlocked: true,
-            blockedReason: reason || "Missed self-defined timeline deadline",
-            blockedAt: now,
             blockedUntil: blockedUntil,
-            blockedBy: new ObjectId(decoded.id),
+            blockReason: reason || "Missed self-defined timeline deadline",
+            updatedAt: now,
           },
         }
       );
 
-      // Update all their applications to blocked status
-      await db.collection("applications").updateMany(
-        {
-          candidateId: application.candidateId,
-          status: { $in: ["applied", "in-progress"] },
-        },
+      // Update this application with cleared timeline
+      await db.collection("applications").updateOne(
+        { _id: applicationId },
         {
           $set: {
             status: "blocked",
-            blockedAt: now,
-            blockedUntil: blockedUntil,
+            rounds: updatedRounds,
+            updatedAt: now,
           },
         }
       );
@@ -173,35 +184,33 @@ export async function PATCH(req: NextRequest, { params }: any) {
         );
       }
 
-      // Unblock the candidate
+      // Unblock the candidate account
       await db.collection("candidates").updateOne(
         { _id: application.candidateId },
         {
-          $set: { isBlocked: false },
-          $unset: {
-            blockedReason: "",
-            blockedAt: "",
-            blockedUntil: "",
-            blockedBy: "",
+          $set: {
+            blockedUntil: null,
+            blockReason: null,
+            updatedAt: new Date(),
           },
         }
       );
 
-      // Update applications back to in-progress
-      await db.collection("applications").updateMany(
-        { candidateId: application.candidateId, status: "blocked" },
+      // Update application back to in-progress
+      // Timeline remains null - they must set a new one
+      await db.collection("applications").updateOne(
+        { _id: applicationId },
         {
-          $set: { status: "in-progress" },
-          $unset: {
-            blockedAt: "",
-            blockedUntil: "",
+          $set: {
+            status: "in-progress",
+            updatedAt: new Date(),
           },
         }
       );
 
       return NextResponse.json({
         success: true,
-        message: "Candidate unblocked successfully",
+        message: "Candidate unblocked successfully. Must set new timeline.",
       });
     }
 
@@ -215,6 +224,7 @@ export async function PATCH(req: NextRequest, { params }: any) {
         "rejected",
         "blocked",
       ];
+
       if (!validStatuses.includes(status)) {
         return NextResponse.json({ error: "Invalid status" }, { status: 400 });
       }
@@ -225,7 +235,6 @@ export async function PATCH(req: NextRequest, { params }: any) {
           $set: {
             status: status,
             updatedAt: new Date(),
-            updatedBy: new ObjectId(decoded.id),
           },
         }
       );
@@ -302,7 +311,7 @@ export async function DELETE(req: NextRequest, { params }: any) {
 
     return NextResponse.json({
       success: true,
-      message: "Application removed successfully",
+      message: "Application archived and removed successfully",
     });
   } catch (err) {
     console.error("Error deleting application:", err);

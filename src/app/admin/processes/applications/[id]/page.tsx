@@ -193,7 +193,6 @@ export default function ApplicantsPage() {
             email: applicant.candidate.email,
             status: applicant.status,
             name: applicant.candidate.name,
-            // ✅ Enhanced fields
             roundProgress: applicant.roundProgress,
             currentRound: applicant.currentRound,
             hasExpiredTimeline: applicant.hasExpiredTimeline,
@@ -248,7 +247,7 @@ export default function ApplicantsPage() {
         data: {
           action: "blockCandidate",
           blockDurationHours: durationHours,
-          reason: "Missed self-defined timeline deadline",
+          reason: "Missed self-defined timeline",
         },
       });
 
