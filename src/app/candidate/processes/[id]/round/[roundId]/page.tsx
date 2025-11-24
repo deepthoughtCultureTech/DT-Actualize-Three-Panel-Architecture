@@ -241,17 +241,17 @@ export default function RoundSubmissionPage() {
   const currentRoundIndex = rounds.findIndex((r) => r._id === roundId) + 1;
 
   return (
-    <div className="h-[calc(100vh-64px)] bg-gradient-to-b from-sky-500 to-blue-900 text-gray-800">
+    <div className="h-[calc(100vh-64px)] w-[calc(100vw-240px)] bg-gradient-to-b px-6 from-sky-500 to-blue-900 text-gray-800">
       <div className="container mx-auto py-6 flex flex-col h-full">
         {/* ✅ Header */}
-        <header className="text-center mt-6">
+        <header className="text-center">
           <motion.main
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.5 }}
             className="flex-1 flex items-center justify-center"
           >
-            <h1 className="mb-1 text-4xl font-bold text-white drop-shadow-md">
+            <h1 className="mb-6 text-4xl font-bold text-white drop-shadow-md">
               {round.title}
             </h1>
           </motion.main>
@@ -325,7 +325,7 @@ export default function RoundSubmissionPage() {
         </motion.main>
 
         {/* Navigation Buttons */}
-        <div className="flex justify-center gap-5 m-6 ml-10">
+        <div className="flex justify-center gap-5 m-6 fixed bottom-0 mb-10 left-1/2 -translate-1/4  ml-10">
           {currentRoundIndex !== 1 && (
             <button
               type="button"

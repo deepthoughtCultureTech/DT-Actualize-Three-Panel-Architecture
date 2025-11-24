@@ -65,9 +65,9 @@ export default function Form({
   );
 
   return (
-    <motion.div className="w-full h-full bg-white rounded-2xl shadow-lg p-8 flex flex-col">
+    <motion.div className="w-full h-full bg-white rounded-2xl shadow-lg p-4 flex flex-col">
       <form className="space-y-6">
-        <div className="space-y-6 h-[560px] overflow-y-auto">
+        <div className="space-y-6 h-[560px] px-4 overflow-y-auto">
           {fields.map((field) => (
             <FieldInput
               key={field._id}

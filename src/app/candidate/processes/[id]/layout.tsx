@@ -192,7 +192,7 @@ export default function RoundLayout({
   return (
     <div className="flex h-[calc(100vh-64px)] bg-gradient-to-b from-sky-100 to-blue-50">
       {/* Sidebar - ✅ Fixed with proper flex layout */}
-      <aside className="w-[15vw] border-r bg-white/90 backdrop-blur-sm shadow-lg flex flex-col overflow-hidden">
+      <aside className="w-[240px] border-r bg-white/90 backdrop-blur-sm shadow-lg flex flex-col overflow-hidden">
         {/* ✅ Main scrollable content area */}
         <div className="flex-1 overflow-y-auto p-4">
           {/* 🧭 Self-defined timeline at top */}
