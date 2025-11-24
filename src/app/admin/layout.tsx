@@ -51,7 +51,7 @@ export default function AdminLayout({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className=" bg-slate-50">
       {/* Top bar */}
       <div className="mx-auto grid grid-cols-1 md:grid-cols-[260px_1fr] gap-0">
         {/* Sidebar */}
