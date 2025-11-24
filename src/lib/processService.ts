@@ -20,6 +20,7 @@ export async function getProcessById(id: string) {
 }
 
 // Get all processes for a given admin
+// admin id not provided as of now
 export async function getProcessesByAdmin() {
   const db = await connectDB();
   return db.collection<Process>("processes").find().toArray();

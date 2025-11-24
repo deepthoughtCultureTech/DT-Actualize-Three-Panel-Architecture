@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { 
-  createProcess, 
-  //getAllProcesses, 
-  getProcessesByAdmin 
+import {
+  createProcess,
+  //getAllProcesses,
+  getProcessesByAdmin,
 } from "@/lib/processService";
 import { verifyToken } from "@/utils/auth";
 import { getAdminById } from "@/lib/adminService";
@@ -31,7 +31,6 @@ import { getAdminById } from "@/lib/adminService";
 //     );
 //   }
 // }
-
 
 // ✅ GET: Fetch processes for the logged-in admin
 // export async function GET(req: NextRequest) {
@@ -68,7 +67,6 @@ import { getAdminById } from "@/lib/adminService";
 //   }
 // }
 
-
 // ✅ GET: Fetch all processes (not just for one admin)
 export async function GET(req: NextRequest) {
   try {
@@ -88,13 +86,16 @@ export async function GET(req: NextRequest) {
     // (Optional) You may still want to ensure only admins can access all
     const admin = await getAdminById(decoded.id);
     if (!admin) {
-      return NextResponse.json({ error: "Forbidden: Not an admin" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Forbidden: Not an admin" },
+        { status: 403 }
+      );
     }
 
     // ✅ Fetch ALL processes
-    const processes = await getProcessesByAdmin(admin._id.toString());
+    //admin id not provided as of now
+    const processes = await getProcessesByAdmin();
     return NextResponse.json(processes);
-
   } catch (err) {
     console.error("Error fetching processes:", err);
     return NextResponse.json(
@@ -121,10 +122,7 @@ export async function POST(req: NextRequest) {
     const data = await req.json();
 
     if (!data.title) {
-      return NextResponse.json(
-        { error: "Title is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
 
     const newProcess = {
