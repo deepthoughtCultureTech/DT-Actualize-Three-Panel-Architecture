@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw, Mail, Phone, User } from "lucide-react";
 
 export default function CandidateAuthPage() {
   const router = useRouter();
@@ -12,13 +12,13 @@ export default function CandidateAuthPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [blockInfo, setBlockInfo] = useState<any>(null); // ✅ Add this
+  const [blockInfo, setBlockInfo] = useState<any>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-    setBlockInfo(null); // ✅ Reset block info
+    setBlockInfo(null);
 
     try {
       const url = isRegister
@@ -36,9 +36,8 @@ export default function CandidateAuthPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        // ✅ Check if account is blocked
         if (data.error === "account_blocked") {
-          setBlockInfo(data);
+          setBlockInfo(data); // ✅ Contains adminContacts directly
         } else {
           setError(
             data.error || (isRegister ? "Registration failed" : "Login failed")
@@ -48,9 +47,8 @@ export default function CandidateAuthPage() {
         return;
       }
 
-      // ✅ for login, API returns token; for register, we directly login
+      // ✅ Handle registration -> auto-login
       if (isRegister) {
-        // after registration, auto-login
         const loginRes = await fetch("/api/candidate/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -59,9 +57,8 @@ export default function CandidateAuthPage() {
         const loginData = await loginRes.json();
 
         if (!loginRes.ok) {
-          // ✅ Check block on auto-login after registration
           if (loginData.error === "account_blocked") {
-            setBlockInfo(loginData);
+            setBlockInfo(loginData); // ✅ Contains adminContacts directly
           } else {
             setError(loginData.error || "Login failed after registration");
           }
@@ -93,58 +90,90 @@ export default function CandidateAuthPage() {
           {isRegister ? "Create your account" : "Access your dashboard"}
         </p>
 
-        {/* ✅ Block Message */}
+        {/* ✅ Block Message with Admin Contacts */}
         {blockInfo && (
-          <div className="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-300 rounded-xl p-5 mb-6">
-            <div className="flex items-start gap-3">
-              <div className="flex-1">
-                <h3 className="font-bold text-orange-900 text-base mb-2 flex items-center gap-2">
-                  Account Temporarily Blocked
-                </h3>
-                <p className="text-orange-800 text-sm mb-3 leading-relaxed">
-                  {blockInfo.message}
-                </p>
+          <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-5 mb-6">
+            <h3 className="font-bold text-orange-900 text-base mb-2">
+              Account Temporarily Blocked
+            </h3>
+            <p className="text-orange-800 text-sm mb-3 leading-relaxed">
+              {blockInfo.message}
+            </p>
 
-                <div className="bg-white rounded-lg p-3 mb-3 border border-orange-200">
-                  <div className="space-y-2">
-                    <div className="flex items-start gap-2 text-orange-700">
-                      <p className="text-xs">
-                        <strong>Reason:</strong> {blockInfo.reason}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 text-orange-700">
-                      <p className="text-xs">
-                        <strong>Time remaining:</strong>{" "}
-                        <span className="font-mono font-bold">
-                          {blockInfo.timeRemaining?.hours}h{" "}
-                          {blockInfo.timeRemaining?.minutes}m
-                        </span>
-                      </p>
-                    </div>
-                  </div>
+            <div className="bg-white rounded-lg p-3 mb-3">
+              <div className="space-y-1">
+                <div className="text-orange-700">
+                  <p className="text-xs">
+                    <strong>Reason:</strong> {blockInfo.reason}
+                  </p>
                 </div>
-
-                <div className="bg-orange-100 rounded-lg p-2.5 border border-orange-200">
-                  <p className="text-xs text-orange-800">
-                    <strong>You can login again at:</strong>
-                    <br />
-                    <span className="font-mono text-xs">
-                      {new Date(blockInfo.blockedUntil).toLocaleString(
-                        "en-US",
-                        {
-                          weekday: "short",
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )}
+                <div className="text-orange-700">
+                  <p className="text-xs">
+                    <strong>Time remaining:</strong>{" "}
+                    <span className="font-mono font-bold">
+                      {blockInfo.timeRemaining?.hours}h{" "}
+                      {blockInfo.timeRemaining?.minutes}m
                     </span>
                   </p>
                 </div>
               </div>
             </div>
+
+            <div className="bg-orange-100 rounded-lg p-2.5 mb-3">
+              <p className="text-xs text-orange-800">
+                <strong>You can login again at:</strong>
+                <br />
+                <span className="font-mono text-xs">
+                  {new Date(blockInfo.blockedUntil).toLocaleString("en-US", {
+                    weekday: "short",
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </p>
+            </div>
+
+            {/* ✅ Admin Contacts - directly from blockInfo */}
+            {blockInfo.adminContacts && blockInfo.adminContacts.length > 0 && (
+              <div className="p-3 flex items-center">
+                <h4 className="text-sm font-bold mb-2 mr-2">Contact Admin:</h4>
+                <div className="space-y-2">
+                  {blockInfo.adminContacts.map((admin: any, idx: number) => (
+                    <div key={idx} className="rounded p-2">
+                      <div className="flex items-center gap-2 text-xs mb-1">
+                        <User className="w-3 h-3" />
+                        <span className="font-semibold">{admin.name}</span>
+                      </div>
+                      {admin.email && (
+                        <div className="flex items-center gap-2 text-xs mb-1">
+                          <Mail className="w-3 h-3" />
+                          <a
+                            href={`mailto:${admin.email}`}
+                            className="hover:underline"
+                          >
+                            {admin.email}
+                          </a>
+                        </div>
+                      )}
+                      {/* {admin.phone && (
+                        <div className="flex items-center gap-2 text-blue-700 text-xs">
+                          <Phone className="w-3 h-3" />
+                          <a
+                            href={`tel:${admin.phone}`}
+                            className="hover:underline"
+                          >
+                            {admin.phone}
+                          </a>
+                        </div>
+                      )} */}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -222,16 +251,15 @@ export default function CandidateAuthPage() {
           </button>
         </form>
 
-        {/* ✅ Show message when blocked */}
         {blockInfo && (
           <div className="mt-4 text-center">
             <p className="text-xs text-gray-600">
-              Please wait for the block period to end before trying again.
+              Please wait for the block period to end or contact admin for
+              assistance.
             </p>
           </div>
         )}
 
-        {/* Toggle between login/register */}
         {!blockInfo && (
           <p className="mt-5 text-center text-sm text-gray-600">
             {isRegister ? "Already registered?" : "New candidate?"}{" "}

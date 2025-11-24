@@ -36,6 +36,8 @@ export default function RoundLayout({
   const [whatsAppGroupLink, setWhatsAppGroupLink] = useState<string | null>(
     null
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dataReady, setDataReady] = useState<Boolean>(false);
   const [isWhatsAppGroupUnlocked, setIsWhatsAppGroupUnlocked] = useState(false);
 
   const router = useRouter();
@@ -43,6 +45,7 @@ export default function RoundLayout({
 
   useEffect(() => {
     const fetchRoundsAndTimeline = async () => {
+      setDataReady(false);
       try {
         const token = localStorage.getItem("token");
         if (!token) return;
@@ -89,12 +92,9 @@ export default function RoundLayout({
               (r: any) => r.status === "submitted" || r.status === "completed"
             )
           ) {
-            const resGroupLink = await fetch(
-              `/api/candidate/applications/${currentApp._id}/whatsapp-link`,
-              {
-                headers: { Authorization: `Bearer ${token}` },
-              }
-            );
+            const resGroupLink = await fetch(`/api/candidate/whatsapp-group`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
             if (resGroupLink.ok) {
               const data = await resGroupLink.json();
               setWhatsAppGroupLink(data.groupLink || null);
@@ -108,6 +108,7 @@ export default function RoundLayout({
             setIsWhatsAppGroupUnlocked(false);
           }
         }
+        setDataReady(true);
       } catch (err) {
         console.error(err);
       } finally {
@@ -120,12 +121,12 @@ export default function RoundLayout({
 
   // Show timeline modal if timeline for current round is empty
   useEffect(() => {
-    if (!loading && rounds.length && !timeline) {
+    if (dataReady && !loading && rounds.length && roundId && !timeline) {
       setShowTimelineModal(true);
     } else {
       setShowTimelineModal(false);
     }
-  }, [loading, rounds, roundId, timeline, id]);
+  }, [dataReady, loading, rounds, roundId, timeline]);
 
   const handleRoundClick = (index: number, _id: string) => {
     if (index > unlockedUpTo) {
@@ -143,22 +144,35 @@ export default function RoundLayout({
 
   // Save timeline for specific round and update state map
   const saveTimeline = async (data: string) => {
-    const token = localStorage.getItem("token");
-    await fetch(`/api/candidate/applications/${id}/round/${roundId}/timeline`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ timeline: data }),
-    });
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem("token");
+      let response = await fetch(
+        `/api/candidate/applications/${id}/round/${roundId}/timeline`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ timeline: data }),
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Failed to save timeline");
+      }
 
-    setRoundTimelines((prev) => ({
-      ...prev,
-      [roundId]: data,
-    }));
-    setTimeline(data);
-    setShowTimelineModal(false);
+      setRoundTimelines((prev) => ({
+        ...prev,
+        [roundId]: data,
+      }));
+      setTimeline(data);
+      setShowTimelineModal(false);
+    } catch (err) {
+      console.error("Error saving timeline:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const currentRoundStatus = completedRounds.find(
@@ -329,7 +343,11 @@ export default function RoundLayout({
 
       {/* Timeline Modal */}
       {showTimelineModal && (
-        <TimerModal isOpen={showTimelineModal} onTimelineSet={saveTimeline} />
+        <TimerModal
+          isOpen={showTimelineModal}
+          onTimelineSet={saveTimeline}
+          isSubmitting={isSubmitting}
+        />
       )}
     </div>
   );

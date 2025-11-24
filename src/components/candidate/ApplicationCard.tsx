@@ -62,13 +62,6 @@ export const ApplicationCard = ({ application }: ApplicationCardProps) => {
             <Badge variant={statusInfo?.variant} className="mb-2">
               {statusInfo?.text}
             </Badge>
-            {/* <Button
-              variant="ghost"
-              size="icon"
-              className="w-8 h-8 text-muted-foreground hover:text-foreground"
-            >
-              <Eye className="w-4 h-4" />
-            </Button> */}
           </div>
           <div>
             <h3 className="text-lg font-bold text-foreground mb-1">

@@ -3,7 +3,15 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
-import { AlertTriangle, Clock, Ban, RefreshCw } from "lucide-react";
+import {
+  AlertTriangle,
+  Clock,
+  Ban,
+  RefreshCw,
+  Unlock,
+  View,
+  Eye,
+} from "lucide-react";
 import BlockDurationModal from "@/components/admin/BlockDurationModal";
 
 const PURPLE = "#3E00FF";
@@ -12,52 +20,93 @@ function StatusBadge({ status }: { status: string }) {
   switch (status) {
     case "completed":
       return (
-        <span className="inline-flex items-center bg-green-500 rounded-full px-8 py-1 text-s font-medium text-white">
+        <span className="inline-flex items-center bg-green-500 rounded-full px-6 py-1 text-xs font-medium text-white">
           Completed
         </span>
       );
     case "in-progress":
       return (
         <span
-          className="inline-flex items-center rounded-full px-8 py-1 text-xs font-medium text-white"
+          className="inline-flex items-center rounded-full px-6 py-1 text-xs font-medium text-white"
           style={{ backgroundColor: PURPLE }}
         >
-          In Process
+          In Progress
         </span>
       );
     case "expired":
       return (
-        <span className="inline-flex items-center bg-red-500 rounded-full px-8 py-1 text-xs font-medium text-white">
+        <span className="inline-flex items-center bg-red-500 rounded-full px-6 py-1 text-xs font-medium text-white">
           Expired
         </span>
       );
     case "blocked":
       return (
-        <span className="inline-flex items-center bg-orange-500 rounded-full px-8 py-1 text-xs font-medium text-white">
+        <span className="inline-flex items-center bg-orange-500 rounded-full px-6 py-1 text-xs font-medium text-white">
           Blocked
         </span>
       );
     default:
       return (
-        <span className="inline-flex items-center rounded-full border px-10 py-1 text-xs font-medium text-gray-700 border-gray-300 bg-white">
+        <span className="inline-flex items-center rounded-full border px-6 py-1 text-xs font-medium text-gray-700 border-gray-300 bg-white">
           Applied
         </span>
       );
   }
 }
 
-// ✅ Timeline Status Component
+// ✅ Enhanced Round Progress Component
+function RoundProgress({
+  progress,
+  currentRound,
+}: {
+  progress: { current: number; total: number; percentage: number } | null;
+  currentRound: any;
+}) {
+  if (!progress) {
+    return <span className="text-xs text-gray-400">-</span>;
+  }
+
+  if (progress.percentage === 100) {
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <span className="text-xs font-semibold text-green-600">✓ Complete</span>
+        <span className="text-xs text-gray-500">
+          {progress.total}/{progress.total}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-1.5 min-w-[120px]">
+      <div className="text-xs font-medium text-gray-700">
+        {progress.current}/{progress.total} Rounds
+      </div>
+      <div className="w-full bg-gray-200 rounded-full h-1.5">
+        <div
+          className="bg-blue-600 h-1.5 rounded-full transition-all"
+          style={{ width: `${progress.percentage}%` }}
+        />
+      </div>
+      {currentRound && (
+        <span className="text-xs text-gray-500">{currentRound.title}</span>
+      )}
+    </div>
+  );
+}
+
+// ✅ Enhanced Timeline Status Component
 function TimelineStatus({
   hasExpired,
-  timeline,
+  currentRound,
   timeRemaining,
 }: {
   hasExpired: boolean;
-  timeline: string | null;
+  currentRound: any;
   timeRemaining: any;
 }) {
-  if (!timeline) {
-    return <span className="text-xs text-gray-400">Not set</span>;
+  if (!currentRound || !currentRound.timeline) {
+    return <span className="text-xs text-gray-400">No deadline</span>;
   }
 
   if (hasExpired) {
@@ -65,30 +114,43 @@ function TimelineStatus({
       <div className="flex flex-col items-center gap-1">
         <div className="flex items-center gap-1 text-red-600">
           <AlertTriangle className="w-4 h-4" />
-          <span className="text-xs font-medium">Expired</span>
+          <span className="text-xs font-semibold">Expired</span>
         </div>
-        <span className="text-xs text-gray-500">{timeline}</span>
+        <span className="text-xs text-gray-500">
+          {new Date(currentRound.timelineDate).toLocaleDateString()}
+        </span>
       </div>
     );
   }
 
   if (timeRemaining && !timeRemaining.expired) {
+    const isUrgent = timeRemaining.days === 0 && timeRemaining.hours < 6;
+
     return (
       <div className="flex flex-col items-center gap-1">
-        <div className="flex items-center gap-1 text-green-600">
+        <div
+          className={`flex items-center gap-1 ${
+            isUrgent ? "text-orange-600" : "text-green-600"
+          }`}
+        >
           <Clock className="w-4 h-4" />
           <span className="text-xs font-medium">
-            {timeRemaining.days}d {timeRemaining.hours}h
+            {timeRemaining.days > 0 && `${timeRemaining.days}d `}
+            {timeRemaining.hours}h {timeRemaining.minutes}m
           </span>
         </div>
-        <span className="text-xs text-gray-500">{timeline}</span>
+        <span className="text-xs text-gray-500">
+          {new Date(currentRound.timelineDate).toLocaleDateString()}
+        </span>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col items-center">
-      <span className="text-xs text-gray-600">{timeline}</span>
+      <span className="text-xs text-gray-600">
+        {new Date(currentRound.timelineDate).toLocaleDateString()}
+      </span>
     </div>
   );
 }
@@ -99,6 +161,7 @@ export default function ApplicantsPage() {
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [blockingId, setBlockingId] = useState<string | null>(null);
+  const [unblockingId, setUnblockingId] = useState<string | null>(null);
 
   // ✅ Modal state
   const [showBlockModal, setShowBlockModal] = useState(false);
@@ -130,11 +193,11 @@ export default function ApplicantsPage() {
             email: applicant.candidate.email,
             status: applicant.status,
             name: applicant.candidate.name,
-            round: applicant.currentRoundIndex,
-            // ✅ Timeline fields
+            // ✅ Enhanced fields
+            roundProgress: applicant.roundProgress,
+            currentRound: applicant.currentRound,
             hasExpiredTimeline: applicant.hasExpiredTimeline,
             expiredRoundsCount: applicant.expiredRoundsCount,
-            activeTimeline: applicant.activeTimeline,
             timeRemaining: applicant.timeRemaining,
           };
         }
@@ -157,7 +220,7 @@ export default function ApplicantsPage() {
     return () => clearInterval(interval);
   }, [id]);
 
-  // ✅ Open modal
+  // ✅ Open block modal
   const openBlockModal = (
     candidateId: string,
     name: string,
@@ -215,11 +278,51 @@ export default function ApplicantsPage() {
     }
   };
 
+  // ✅ Handle unblock
+  const handleUnblock = async (
+    candidateId: string,
+    applicationId: string,
+    name: string
+  ) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to unblock ${name}?\n\nThis will restore their access immediately.`
+    );
+
+    if (!confirmed) return;
+
+    setUnblockingId(candidateId);
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios({
+        url: `/api/admin/applications/${applicationId}`,
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        data: {
+          action: "unblockCandidate",
+        },
+      });
+
+      if (response.data.success) {
+        alert(`${name} has been unblocked successfully.`);
+        fetchData();
+      }
+    } catch (err: any) {
+      console.error("Error unblocking candidate:", err);
+      alert(err.response?.data?.error || "Failed to unblock candidate");
+    } finally {
+      setUnblockingId(null);
+    }
+  };
+
   // ✅ Filter applicants
   const filteredApplicants = applicants.filter((a: any) => {
     if (filterStatus === "expired") return a.hasExpiredTimeline;
     if (filterStatus === "active")
-      return !a.hasExpiredTimeline && a.activeTimeline;
+      return !a.hasExpiredTimeline && a.currentRound?.timeline;
     if (filterStatus === "all") return true;
     return a.status === filterStatus;
   });
@@ -252,11 +355,11 @@ export default function ApplicantsPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Page header */}
-      <header className="mx-auto w-full max-w-6xl px-6 pt-14 text-center">
+      <header className="mx-auto w-full max-w-7xl px-6 pt-14 text-center">
         <h1 className="text-4xl font-semibold tracking-tight text-gray-900">
           {processHeading}
         </h1>
-        <div className="mt-3 flex items-center justify-center gap-4">
+        <div className="mt-3 flex items-center justify-center gap-4 flex-wrap">
           <p className="text-lg font-medium text-gray-400">Applicants</p>
           {expiredCount > 0 && (
             <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-medium">
@@ -274,14 +377,14 @@ export default function ApplicantsPage() {
       </header>
 
       {/* ✅ Filter Tabs */}
-      <div className="mx-auto w-full max-w-6xl px-6 mt-8">
-        <div className="flex items-center justify-between">
+      <div className="mx-auto w-full max-w-7xl px-6 mt-8">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => setFilterStatus("all")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                 filterStatus === "all"
-                  ? "bg-purple-600 text-white"
+                  ? "bg-blue-600 text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
@@ -342,17 +445,17 @@ export default function ApplicantsPage() {
       </div>
 
       {/* Table */}
-      <main className="mx-auto mt-6 w-full max-w-6xl px-6 pb-20">
+      <main className="mx-auto mt-6 w-full max-w-7xl px-6 pb-20">
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead className="bg-slate-50 text-slate-600">
                 <tr className="[&>th]:px-4 [&>th]:py-3">
-                  <th className="w-[25%]">Name</th>
-                  <th className="text-center w-[15%]">Status</th>
-                  <th className="text-center w-[10%]">Round</th>
-                  <th className="text-center w-[20%]">Timeline</th>
-                  <th className="text-right w-[30%] pr-2">Actions</th>
+                  <th className="w-[20%]">Name</th>
+                  <th className="text-center w-[12%]">Status</th>
+                  <th className="text-center w-[18%]">Progress</th>
+                  <th className="text-center w-[18%]">Timeline</th>
+                  <th className="text-right w-[32%] pr-2">Actions</th>
                 </tr>
               </thead>
 
@@ -372,7 +475,7 @@ export default function ApplicantsPage() {
                       key={a.id}
                       className={`hover:bg-slate-50/60 transition-colors ${
                         a.hasExpiredTimeline ? "bg-red-50/40" : ""
-                      }`}
+                      } ${a.status === "blocked" ? "bg-orange-50/30" : ""}`}
                     >
                       {/* Name & Email */}
                       <td className="px-4 py-3">
@@ -387,18 +490,19 @@ export default function ApplicantsPage() {
                         <StatusBadge status={a.status} />
                       </td>
 
-                      {/* Round */}
-                      <td className="px-4 py-3 text-center">
-                        <p className="text-sm text-slate-600">
-                          {a.round !== null ? a.round + 1 : "-"}
-                        </p>
+                      {/* ✅ Round Progress */}
+                      <td className="px-4 py-3">
+                        <RoundProgress
+                          progress={a.roundProgress}
+                          currentRound={a.currentRound}
+                        />
                       </td>
 
                       {/* ✅ Timeline Status */}
                       <td className="px-4 py-3">
                         <TimelineStatus
                           hasExpired={a.hasExpiredTimeline}
-                          timeline={a.activeTimeline}
+                          currentRound={a.currentRound}
                           timeRemaining={a.timeRemaining}
                         />
                       </td>
@@ -419,17 +523,7 @@ export default function ApplicantsPage() {
                               );
                             }}
                           >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-4 w-4"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
-                              <circle cx="12" cy="12" r="3" />
-                            </svg>
+                            <Eye size={14} />
                             View
                           </button>
 
@@ -456,12 +550,27 @@ export default function ApplicantsPage() {
                             </button>
                           )}
 
-                          {/* Show Blocked status */}
+                          {/* ✅ Unblock Button - Only for blocked users */}
                           {a.status === "blocked" && (
-                            <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-xs font-medium">
-                              <Ban className="h-3 w-3" />
-                              Blocked
-                            </span>
+                            <button
+                              className="cursor-pointer inline-flex items-center gap-2 rounded-full bg-green-500 hover:bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+                              onClick={() =>
+                                handleUnblock(a.id, a.applicationId, a.name)
+                              }
+                              disabled={unblockingId === a.id}
+                            >
+                              {unblockingId === a.id ? (
+                                <>
+                                  <RefreshCw className="h-4 w-4 animate-spin" />
+                                  Unblocking...
+                                </>
+                              ) : (
+                                <>
+                                  <Unlock className="h-4 w-4" />
+                                  Unblock
+                                </>
+                              )}
+                            </button>
                           )}
                         </div>
                       </td>

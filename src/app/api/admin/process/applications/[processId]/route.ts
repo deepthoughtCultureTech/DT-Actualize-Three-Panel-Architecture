@@ -48,28 +48,37 @@ export async function GET(req: NextRequest, { params }: any) {
       let expiredRoundsCount = 0;
       let activeTimeline = null;
       let timeRemaining = null;
+      let currentRound = null;
 
-      // Check if application has rounds
-      if (!app.rounds || app.rounds.length === 0) {
-        return {
-          ...app,
-          hasExpiredTimeline: false,
-          expiredRoundsCount: 0,
-          activeTimeline: null,
-          timeRemaining: null,
-        };
-      }
+      const totalRounds = app.rounds.length;
+      const completedRounds = app.rounds.filter(
+        (r: any) => r.status === "submitted"
+      ).length;
 
+      const roundProgress = {
+        current: completedRounds,
+        total: totalRounds,
+        percentage: Math.round((completedRounds / totalRounds) * 100),
+      };
       // ✅ Find current round and check timeline
       if (app.currentRoundIndex !== null && app.rounds[app.currentRoundIndex]) {
-        const currentRound = app.rounds[app.currentRoundIndex];
+        const round = app.rounds[app.currentRoundIndex];
+
+        currentRound = {
+          title: round.title || `Round ${app.currentRoundIndex + 1}`,
+          order: app.currentRoundIndex + 1,
+          roundId: round.roundId,
+          status: round.status,
+          timeline: round.timeline,
+          timelineDate: round.timelineDate,
+        };
 
         // Check if current round has timeline
-        if (currentRound.timeline && currentRound.timelineDate) {
+        if (round.timeline && round.timelineDate) {
           activeTimeline = currentRound.timeline;
 
           // ✅ Convert timelineDate to Date object
-          const deadlineDate = new Date(currentRound.timelineDate);
+          const deadlineDate = new Date(round.timelineDate);
 
           // ✅ Check if expired
           const isExpired = deadlineDate < now;
@@ -91,6 +100,14 @@ export async function GET(req: NextRequest, { params }: any) {
               days,
               hours,
               minutes,
+            };
+          } else {
+            // Expired
+            timeRemaining = {
+              expired: true,
+              days: 0,
+              hours: 0,
+              minutes: 0,
             };
           }
         }
@@ -121,6 +138,8 @@ export async function GET(req: NextRequest, { params }: any) {
         expiredRoundsCount,
         activeTimeline,
         timeRemaining,
+        currentRound,
+        roundProgress,
       };
     });
 

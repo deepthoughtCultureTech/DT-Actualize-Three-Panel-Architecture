@@ -52,7 +52,6 @@ export default function BlockDurationModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <div className="flex items-center gap-2">
-            <Ban className="w-2 h-5 text-orange-600" />
             <h2 className="text-xl font-bold text-gray-900">Block Candidate</h2>
           </div>
           <button
@@ -65,9 +64,9 @@ export default function BlockDurationModal({
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-4">
           {/* Candidate Info */}
-          <div className="bg-orange-50 border border-orange-200 rounded-lg">
+          <div className="bg-orange-50 border p-4 border-orange-200 rounded-lg">
             <div className="flex items-start gap-3">
               <Ban className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
               <div>
@@ -86,7 +85,7 @@ export default function BlockDurationModal({
             <label className="block text-sm font-semibold text-gray-700 mb-3">
               Select Block Duration
             </label>
-            <div>
+            <div className="space-y-2">
               {/* 12 Hours */}
               <label className="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50">
                 <input

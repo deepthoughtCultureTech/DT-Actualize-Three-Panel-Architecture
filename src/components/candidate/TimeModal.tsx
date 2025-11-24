@@ -1,31 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import { formatEndTime } from "../../lib/utils";
 
 interface TimerModalProps {
   isOpen: boolean;
   onTimelineSet: (hours: string) => void;
+  isSubmitting?: boolean;
 }
 
-const TimerModal: React.FC<TimerModalProps> = ({ isOpen, onTimelineSet }) => {
+const TimerModal: React.FC<TimerModalProps> = ({
+  isOpen,
+  onTimelineSet,
+  isSubmitting,
+}) => {
   const [customHours, setCustomHours] = useState<number>(24);
   //const { showToast } = useToast();
 
   const handleSetTimeline = () => {
-  const endTime = new Date(Date.now() + customHours * 60 * 60 * 1000);
-  const formatted = endTime.toLocaleString("en-IN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-  onTimelineSet(formatted);
-};
-
+    const endTime = new Date(Date.now() + customHours * 60 * 60 * 1000);
+    const formatted = endTime.toLocaleString("en-IN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+    onTimelineSet(formatted);
+  };
 
   const quickOptions = [
-    { label: '6h', value: 6 },
-    { label: '12h', value: 12 },
-    { label: '24h', value: 24 },
-    { label: '36h', value: 36 },
-    { label: '48h', value: 48 }
+    { label: "6h", value: 6 },
+    { label: "12h", value: 12 },
+    { label: "24h", value: 24 },
+    { label: "36h", value: 36 },
+    { label: "48h", value: 48 },
   ];
 
   if (!isOpen) return null;
@@ -35,10 +39,14 @@ const TimerModal: React.FC<TimerModalProps> = ({ isOpen, onTimelineSet }) => {
       <div className="bg-white rounded-3xl p-8 shadow-2xl max-w-md w-full text-center space-y-8 border border-gray-100">
         {/* Header */}
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-gray-900">Self-Defined Timeline</h2>
-          <p className="text-gray-500 text-sm">Choose how long you need for this challenge</p>
+          <h2 className="text-2xl font-bold text-gray-900">
+            Self-Defined Timeline
+          </h2>
+          <p className="text-gray-500 text-sm">
+            Choose how long you need for this challenge
+          </p>
         </div>
-        
+
         {/* Quick Options */}
         <div className="space-y-4">
           <div className="flex flex-wrap justify-center gap-2">
@@ -48,8 +56,8 @@ const TimerModal: React.FC<TimerModalProps> = ({ isOpen, onTimelineSet }) => {
                 onClick={() => setCustomHours(option.value)}
                 className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
                   customHours === option.value
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 scale-105'
-                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100 hover:scale-105'
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25 scale-105"
+                    : "bg-gray-50 text-gray-700 hover:bg-gray-100 hover:scale-105"
                 }`}
               >
                 {option.label}
@@ -80,13 +88,19 @@ const TimerModal: React.FC<TimerModalProps> = ({ isOpen, onTimelineSet }) => {
                 onChange={(e) => setCustomHours(Number(e.target.value))}
                 className="flex-1 h-2 bg-gray-200 rounded-full appearance-none cursor-pointer slider"
                 style={{
-                  background: `linear-gradient(to right, #2563eb 0%, #2563eb ${((customHours - 1) / 47) * 100}%, #e5e7eb ${((customHours - 1) / 47) * 100}%, #e5e7eb 100%)`
+                  background: `linear-gradient(to right, #2563eb 0%, #2563eb ${
+                    ((customHours - 1) / 47) * 100
+                  }%, #e5e7eb ${
+                    ((customHours - 1) / 47) * 100
+                  }%, #e5e7eb 100%)`,
                 }}
               />
               <span className="text-sm text-gray-500 min-w-[25px]">48h</span>
             </div>
             <div className="text-center">
-              <span className="text-2xl font-bold text-blue-600">{customHours}</span>
+              <span className="text-2xl font-bold text-blue-600">
+                {customHours}
+              </span>
               <span className="text-sm text-gray-500 ml-1">hours</span>
             </div>
           </div>
@@ -95,9 +109,20 @@ const TimerModal: React.FC<TimerModalProps> = ({ isOpen, onTimelineSet }) => {
         {/* Confirm Button */}
         <button
           onClick={handleSetTimeline}
-          className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-4 rounded-2xl font-semibold transition-all duration-200 shadow-lg shadow-blue-600/25 hover:shadow-xl hover:shadow-blue-600/30 hover:scale-[1.02]"
+          disabled={isSubmitting}
+          className={`w-full  px-6 py-4 rounded-2xl font-semibold transition-all duration-200 shadow-lg shadow-blue-600/25 hover:shadow-xl hover:shadow-blue-600/30 hover:scale-[1.02] ${
+            isSubmitting
+              ? "bg-secondary cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-800 cursor-pointer text-white"
+          }`}
         >
-          Save Timeline
+          {isSubmitting ? (
+            <span className="flex items-center justify-center gap-2">
+              Submitting...
+            </span>
+          ) : (
+            "Submit"
+          )}
         </button>
       </div>
     </div>

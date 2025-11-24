@@ -16,7 +16,10 @@ export async function GET(req: NextRequest) {
     const token = authHeader.split(" ")[1];
     const payload = verifyToken<{ id: string; role: string }>(token);
 
-    if (!payload || payload.role !== "admin") {
+    if (
+      !payload ||
+      (payload.role !== "admin" && payload.role !== "candidate")
+    ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
