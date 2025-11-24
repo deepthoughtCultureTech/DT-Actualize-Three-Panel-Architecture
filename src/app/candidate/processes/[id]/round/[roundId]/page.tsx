@@ -11,7 +11,13 @@ import Instructions from "@/components/rounds/Instructions";
 interface Field {
   _id: string;
   question: string;
-  subType: "shortText" | "fileUpload" | "number";
+  subType:
+    | "shortText"
+    | "longText"
+    | "fileUpload"
+    | "singleChoice"
+    | "multipleChoice";
+  options: string[]; // ✅ For choice-based fields
 }
 
 interface Upload {
@@ -38,7 +44,7 @@ export default function RoundSubmissionPage() {
   const [round, setRound] = useState<Round | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [saving, setSaving] = useState(false);
   const [showInstructions, setShowInstructions] = useState(true);
 
@@ -75,7 +81,7 @@ export default function RoundSubmissionPage() {
               (r: any) => r.roundId === roundId
             );
             if (roundProgress && roundProgress.answers) {
-              const prefilled: Record<string, string> = {};
+              const prefilled: Record<string, string | string[]> = {};
               roundProgress.answers.forEach((ans: any) => {
                 prefilled[ans.fieldId] = ans.answer;
               });
@@ -94,7 +100,7 @@ export default function RoundSubmissionPage() {
   }, [id, roundId]);
 
   // ✅ Autosave handler
-  const handleChange = async (fieldId: string, value: string) => {
+  const handleChange = async (fieldId: string, value: string | string[]) => {
     setAnswers((prev) => ({ ...prev, [fieldId]: value }));
 
     try {
@@ -117,11 +123,26 @@ export default function RoundSubmissionPage() {
     }
   };
 
+  // ✅ Validation helper
+  const isFieldAnswered = (field: Field): boolean => {
+    const answer = answers[field._id];
+
+    if (!answer) return false;
+
+    // For arrays (multipleChoice)
+    if (Array.isArray(answer)) {
+      return answer.length > 0;
+    }
+
+    // For strings
+    return answer.trim() !== "";
+  };
+
   // ✅ Full round submit
   const handleSubmit = async () => {
     if ((round?.type === "form" || round?.type === "hybrid") && round.fields) {
       const unansweredFields = round.fields.filter(
-        (field) => !answers[field._id] || answers[field._id].trim() === ""
+        (field) => !isFieldAnswered(field)
       );
 
       if (unansweredFields.length > 0) {
@@ -130,7 +151,7 @@ export default function RoundSubmissionPage() {
         const el = document.getElementById(firstFieldId);
         if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
 
-        // Optionally, flash red border
+        // Flash red border
         unansweredFields.forEach((field) => {
           const elem = document.getElementById(field._id);
           if (elem) {
@@ -139,7 +160,11 @@ export default function RoundSubmissionPage() {
           }
         });
 
-        return; // Stop submission
+        // Show alert
+        alert(
+          `Please answer all required fields. ${unansweredFields.length} field(s) remaining.`
+        );
+        return;
       }
     }
 
@@ -147,7 +172,7 @@ export default function RoundSubmissionPage() {
     setSubmitting(true);
     try {
       const payload =
-        round?.type === "form"
+        round?.type === "form" || round?.type === "hybrid"
           ? {
               answers: Object.entries(answers).map(([fieldId, answer]) => ({
                 fieldId,
@@ -179,6 +204,7 @@ export default function RoundSubmissionPage() {
       }
     } catch (err) {
       console.error(err);
+      alert("Submission failed. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -187,10 +213,8 @@ export default function RoundSubmissionPage() {
   // ✅ Back button handler
   const handleBack = () => {
     if (currentRoundIndex === 1) {
-      // If Round 1 → go to dashboard
       router.push("/candidate/dashboard");
     } else {
-      // Else → go to previous round
       const prevRoundId = rounds[currentRoundIndex - 2]?._id;
       if (prevRoundId) {
         router.push(`/candidate/processes/${id}/round/${prevRoundId}`);
@@ -209,7 +233,7 @@ export default function RoundSubmissionPage() {
   if (!round) {
     return (
       <div className="flex h-screen items-center justify-center min-h-screen bg-gradient-to-b from-sky-500 to-blue-900">
-        <p className="text-white-500">Round not found</p>
+        <p className="text-white">Round not found</p>
       </div>
     );
   }
@@ -219,7 +243,7 @@ export default function RoundSubmissionPage() {
   return (
     <div className="h-[calc(100vh-64px)] bg-gradient-to-b from-sky-500 to-blue-900 text-gray-800">
       <div className="container mx-auto py-6 flex flex-col h-full">
-        {/* ✅ Header (Round heading and description) */}
+        {/* ✅ Header */}
         <header className="text-center mt-6">
           <motion.main
             initial={{ opacity: 0 }}
@@ -233,7 +257,7 @@ export default function RoundSubmissionPage() {
           </motion.main>
         </header>
 
-        {/* ✅ Main Body (Instructions or Form) */}
+        {/* ✅ Main Body */}
         <motion.main
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -258,7 +282,7 @@ export default function RoundSubmissionPage() {
 
           {round.type === "hybrid" && (
             <div className="w-full">
-              {/* Toggle aligned to the right */}
+              {/* Toggle */}
               <div className="flex justify-end mb-2">
                 <button
                   onClick={() => setShowInstructions((prev) => !prev)}
@@ -276,9 +300,8 @@ export default function RoundSubmissionPage() {
                 </button>
               </div>
 
-              {/* Left–Right layout */}
+              {/* Layout */}
               <div className="flex flex-col md:flex-row w-full gap-6">
-                {/* Left: Form (flex-1 so it fills remaining space) */}
                 <div className="w-full">
                   <Form
                     fields={round.fields}
@@ -288,7 +311,6 @@ export default function RoundSubmissionPage() {
                   />
                 </div>
 
-                {/* Right: Instructions (fixed width on desktop; stacked on mobile) */}
                 {showInstructions && (
                   <div className="w-3/6">
                     <Instructions
@@ -323,7 +345,11 @@ export default function RoundSubmissionPage() {
               disabled={saving || submitting}
               className="flex cursor-pointer items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:scale-105 transition disabled:opacity-50"
             >
-              {saving ? "Saving..." : "Submit & Group Link"}
+              {saving
+                ? "Saving..."
+                : submitting
+                ? "Submitting..."
+                : "Submit & Group Link"}
               <ArrowRight className="w-4 h-4" />
             </button>
           )}
@@ -335,7 +361,11 @@ export default function RoundSubmissionPage() {
               disabled={saving || submitting}
               className="flex cursor-pointer items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-green-600 to-green-700 text-white shadow-md hover:scale-105 transition disabled:opacity-50"
             >
-              {saving ? "Saving..." : "Submit & Continue"}
+              {saving
+                ? "Saving..."
+                : submitting
+                ? "Submitting..."
+                : "Submit & Continue"}
               <ArrowRight className="w-4 h-4" />
             </button>
           )}

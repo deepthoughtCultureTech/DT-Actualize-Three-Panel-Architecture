@@ -200,9 +200,10 @@ export default function RoundLayout({
 
   return (
     <div className="flex h-[calc(100vh-64px)] bg-gradient-to-b from-sky-100 to-blue-50">
-      {/* Sidebar */}
-      <aside className="w-[15vw] border-r bg-white/90 backdrop-blur-sm shadow-lg flex flex-col justify-between">
-        <div className="p-4">
+      {/* Sidebar - ✅ Fixed with proper flex layout */}
+      <aside className="w-[15vw] border-r bg-white/90 backdrop-blur-sm shadow-lg flex flex-col overflow-hidden">
+        {/* ✅ Main scrollable content area */}
+        <div className="flex-1 overflow-y-auto p-4">
           {/* 🧭 Self-defined timeline at top */}
           <div className="mb-6">
             <h2 className="text-lg font-bold text-blue-800 mb-2">
@@ -227,7 +228,8 @@ export default function RoundLayout({
             </div>
           </div>
 
-          <div className="h-[68vh] space-y-2 overflow-x-auto">
+          {/* ✅ Removed fixed height, let it grow naturally */}
+          <div className="space-y-2">
             {rounds.map((round, index) => {
               const isActive = round._id === roundId;
               const isCompleted = completedRounds.some(
@@ -272,6 +274,7 @@ export default function RoundLayout({
               );
             })}
 
+            {/* WhatsApp Group */}
             <div className="mt-3 border-t pt-3">
               {isWhatsAppGroupUnlocked && whatsAppGroupLink ? (
                 <Link
@@ -300,8 +303,8 @@ export default function RoundLayout({
           </div>
         </div>
 
-        {/* Back to Process */}
-        <div className="p-4 border-t">
+        {/* ✅ Fixed "Back to Process" button at bottom */}
+        <div className="flex-shrink-0 p-4 border-t bg-white">
           <button
             onClick={handleBackToProcess}
             className="w-full cursor-pointer flex items-center justify-center gap-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg py-2 hover:bg-gray-100 transition"

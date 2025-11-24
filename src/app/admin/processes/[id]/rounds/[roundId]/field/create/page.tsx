@@ -10,9 +10,10 @@ const openSans = Open_Sans({ subsets: ["latin"] });
 type SubType =
   | "shortText"
   | "longText"
+  | "fileUpload"
   | "singleChoice"
-  | "multipleChoice"
-  | "codeEditor";
+  | "multipleChoice";
+// | "codeEditor";  // ✅ Commented out
 
 export default function CreateFieldPage() {
   const params = useParams<{ id: string; roundId: string }>();
@@ -26,23 +27,53 @@ export default function CreateFieldPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // ✅ For multiple choice options
+  const [options, setOptions] = useState<string[]>(["", ""]);
+
   // load token only in the browser
   useEffect(() => {
     setToken(localStorage.getItem("token"));
   }, []);
 
-  const questionError =
-    !question.trim()
-      ? "Question is required"
-      : question.trim().length < 5
-      ? "Field Title must be at least 5 characters"
+  const questionError = !question.trim()
+    ? "Question is required"
+    : question.trim().length < 5
+    ? "Field Title must be at least 5 characters"
+    : null;
+
+  // ✅ Validation for multiple choice
+  const optionsError =
+    type === "multipleChoice" || type === "singleChoice"
+      ? options.filter((opt) => opt.trim()).length < 2
+        ? "At least 2 options are required"
+        : null
       : null;
+
+  // ✅ Add option
+  const addOption = () => {
+    setOptions([...options, ""]);
+  };
+
+  // ✅ Remove option
+  const removeOption = (index: number) => {
+    if (options.length > 2) {
+      setOptions(options.filter((_, i) => i !== index));
+    }
+  };
+
+  // ✅ Update option
+  const updateOption = (index: number, value: string) => {
+    const newOptions = [...options];
+    newOptions[index] = value;
+    setOptions(newOptions);
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
 
     if (questionError) return;
+    if (optionsError) return;
     if (!token) {
       setErrorMsg("You are not logged in.");
       return;
@@ -50,6 +81,18 @@ export default function CreateFieldPage() {
 
     try {
       setLoading(true);
+
+      // ✅ Prepare payload based on field type
+      const payload: any = {
+        question: question.trim(),
+        subType: type,
+      };
+
+      // ✅ Add options for choice-based fields
+      if (type === "multipleChoice" || type === "singleChoice") {
+        payload.options = options.filter((opt) => opt.trim());
+      }
+
       const res = await fetch(
         `/api/admin/process/${processId}/round/${roundId}/field`,
         {
@@ -58,7 +101,7 @@ export default function CreateFieldPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ question: question.trim(), subType: type }),
+          body: JSON.stringify(payload),
         }
       );
 
@@ -96,7 +139,10 @@ export default function CreateFieldPage() {
         <fieldset disabled={loading} className="space-y-5">
           {/* Question */}
           <div>
-            <label htmlFor="question" className="block text-sm font-medium text-slate-800">
+            <label
+              htmlFor="question"
+              className="block text-sm font-medium text-slate-800"
+            >
               Field Title <span className="text-rose-600">*</span>
             </label>
             <input
@@ -114,55 +160,168 @@ export default function CreateFieldPage() {
               autoFocus
             />
             <div className="mt-1 flex items-center justify-between text-xs">
-              <span className={`${questionError ? "text-rose-600" : "text-slate-500"}`}>
+              <span
+                className={`${
+                  questionError ? "text-rose-600" : "text-slate-500"
+                }`}
+              >
                 {questionError ? questionError : "Keep it clear and concise."}
               </span>
-              <span className="text-slate-400">{question.trim().length}/240</span>
+              <span className="text-slate-400">
+                {question.trim().length}/240
+              </span>
             </div>
           </div>
 
           {/* Type */}
           <div>
-            <label htmlFor="type" className="block text-sm font-medium text-slate-800">
+            <label
+              htmlFor="type"
+              className="block text-sm font-medium text-slate-800"
+            >
               Response Type
             </label>
             <select
               id="type"
               value={type}
-              onChange={(e) => setType(e.target.value as SubType)}
+              onChange={(e) => {
+                setType(e.target.value as SubType);
+                // ✅ Reset options when switching to/from choice types
+                if (
+                  e.target.value === "multipleChoice" ||
+                  e.target.value === "singleChoice"
+                ) {
+                  setOptions(["", ""]);
+                }
+              }}
               className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="shortText">Short Text</option>
+              <option value="longText">Long Text</option>
               <option value="fileUpload">File Upload</option>
-              {/* <option value="longText">Long Text</option>
               <option value="singleChoice">Single Choice</option>
               <option value="multipleChoice">Multiple Choice</option>
-              <option value="codeEditor">Code Editor</option> */}
+              {/* <option value="codeEditor">Code Editor</option> */}
             </select>
             <p className="mt-1 text-xs text-slate-500">
-              You can configure options/validation later if needed.
+              {type === "shortText" && "Single line text input (max 500 chars)"}
+              {type === "longText" && "Multi-line text area (max 5000 chars)"}
+              {type === "fileUpload" && "Allow candidates to upload files"}
+              {type === "singleChoice" && "Radio buttons - select one option"}
+              {type === "multipleChoice" &&
+                "Checkboxes - select multiple options"}
+              {/* {type === "codeEditor" && "Code editor with syntax highlighting"} */}
             </p>
           </div>
+
+          {/* ✅ Options for Multiple/Single Choice */}
+          {(type === "multipleChoice" || type === "singleChoice") && (
+            <div>
+              <label className="block text-sm font-medium text-slate-800 mb-2">
+                Options <span className="text-rose-600">*</span>
+              </label>
+              <div className="space-y-2">
+                {options.map((option, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={option}
+                      onChange={(e) => updateOption(index, e.target.value)}
+                      placeholder={`Option ${index + 1}`}
+                      className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                      maxLength={100}
+                    />
+                    {options.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => removeOption(index)}
+                        className="text-rose-600 hover:text-rose-700 text-sm font-medium px-2"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={addOption}
+                className="mt-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                + Add Option
+              </button>
+              {optionsError && (
+                <p className="mt-1 text-xs text-rose-600">{optionsError}</p>
+              )}
+            </div>
+          )}
+
+          {/* ✅ Additional Config for Long Text */}
+          {type === "longText" && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-700">
+                <strong>Note:</strong> Long text fields will be displayed as a
+                textarea with a minimum height of 4 rows.
+              </p>
+            </div>
+          )}
+
+          {/* ✅ Additional Config for File Upload */}
+          {type === "fileUpload" && (
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+              <p className="text-xs text-purple-700">
+                <strong>Note:</strong> Accepted file types: PDF, DOC, DOCX, JPG,
+                PNG (Max 10MB)
+              </p>
+            </div>
+          )}
+
+          {/* ✅ Additional Config for Code Editor - COMMENTED OUT */}
+          {/* {type === "codeEditor" && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <p className="text-xs text-green-700">
+                <strong>Note:</strong> Code editor with syntax highlighting for
+                multiple languages (JavaScript, Python, Java, C++, etc.)
+              </p>
+            </div>
+          )} */}
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-2 pt-2">
             <button
               type="button"
-              onClick={() => router.push(`/admin/processes/${processId}/rounds/${roundId}`)}
+              onClick={() =>
+                router.push(`/admin/processes/${processId}/rounds/${roundId}`)
+              }
               className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading || !!questionError}
+              disabled={loading || !!questionError || !!optionsError}
               className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {loading ? (
                 <>
-                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.25" />
-                    <path fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4A4 4 0 0 0 8 12H4z" />
+                  <svg
+                    className="h-4 w-4 animate-spin"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                      opacity="0.25"
+                    />
+                    <path
+                      fill="currentColor"
+                      d="M4 12a8 8 0 0 1 8-8v4A4 4 0 0 0 8 12H4z"
+                    />
                   </svg>
                   Creating…
                 </>
