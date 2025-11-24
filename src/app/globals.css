@@ -256,7 +256,7 @@
 }
 
 label {
-  @apply mb-2 block text-base;
+  @apply mb-3 block text-lg;
 }
 
 label::first-letter {
