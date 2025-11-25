@@ -32,8 +32,8 @@ export default function CandidateDashboard() {
   const [loading, setLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
+  // ✅ Check onboarding status on mount
   useEffect(() => {
-    // Check if user has seen onboarding
     const hasSeenOnboarding = localStorage.getItem("hasSeenOnboarding");
     if (!hasSeenOnboarding) {
       setShowOnboarding(true);
@@ -64,7 +64,6 @@ export default function CandidateDashboard() {
               if (round.status === "submitted") {
                 roundStatus = "submitted";
               } else if (round.status === "in-progress") {
-                // If this is the current round, mark it as "continue"
                 roundStatus =
                   app.currentRoundIndex !== null &&
                   app.currentRoundIndex === idx
@@ -73,7 +72,6 @@ export default function CandidateDashboard() {
               } else if (round.status === "pending") {
                 roundStatus = "pending";
               } else {
-                // fallback (shouldn't normally hit)
                 roundStatus = "pending";
               }
 
@@ -98,6 +96,12 @@ export default function CandidateDashboard() {
     fetchApplications();
   }, []);
 
+  // ✅ Handle onboarding completion
+  const handleOnboardingComplete = () => {
+    localStorage.setItem("hasSeenOnboarding", "true");
+    setShowOnboarding(false);
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -106,28 +110,32 @@ export default function CandidateDashboard() {
     );
   }
 
-  if (applications.length === 0) {
+  // ✅ Show onboarding modal if first time (works for both empty and non-empty states)
+  if (showOnboarding) {
     return (
-      <>
-        {showOnboarding && (
-          <OnboardingVideo
-            videoId="WNwkhFi6JFs"
-            onComplete={() => setShowOnboarding(false)}
-          />
-        )}
-        <div className="flex h-screen flex-col items-center justify-center text-center">
-          <h2 className="mb-2 text-2xl font-semibold text-gray-800">
-            No Applications Found
-          </h2>
-          <p className="text-gray-600 mb-6">
-            You haven’t applied to any process yet. Explore opportunities!
-          </p>
-          <BrowseSection applications={applications} />
-        </div>
-      </>
+      <OnboardingVideo
+        videoId="WNwkhFi6JFs"
+        onComplete={handleOnboardingComplete}
+      />
     );
   }
 
+  // Empty state
+  if (applications.length === 0) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center text-center">
+        <h2 className="mb-2 text-2xl font-semibold text-gray-800">
+          No Applications Found
+        </h2>
+        <p className="text-gray-600 mb-6">
+          You haven&apos;t applied to any process yet. Explore opportunities!
+        </p>
+        <BrowseSection applications={applications} />
+      </div>
+    );
+  }
+
+  // Main dashboard
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader />
