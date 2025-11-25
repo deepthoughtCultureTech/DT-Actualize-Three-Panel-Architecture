@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, RefreshCw, Mail, User } from "lucide-react";
+import { AlertCircle, RefreshCw, Mail, User, Phone } from "lucide-react";
 
 export default function CandidateAuthPage() {
   const router = useRouter();
@@ -158,8 +158,8 @@ export default function CandidateAuthPage() {
                           </a>
                         </div>
                       )}
-                      {/* {admin.phone && (
-                        <div className="flex items-center gap-2 text-blue-700 text-xs">
+                      {admin.phone && (
+                        <div className="flex items-center gap-2 text-xs">
                           <Phone className="w-3 h-3" />
                           <a
                             href={`tel:${admin.phone}`}
@@ -168,7 +168,7 @@ export default function CandidateAuthPage() {
                             {admin.phone}
                           </a>
                         </div>
-                      )} */}
+                      )}
                     </div>
                   ))}
                 </div>
