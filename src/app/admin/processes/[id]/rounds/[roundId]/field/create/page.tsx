@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Open_Sans } from "next/font/google";
+import TiptapEditor from "@/components/tiptap/TiptapEditor";
 
 const openSans = Open_Sans({ subsets: ["latin"] });
 
@@ -13,7 +14,6 @@ type SubType =
   | "fileUpload"
   | "singleChoice"
   | "multipleChoice";
-// | "codeEditor";  // ✅ Commented out
 
 export default function CreateFieldPage() {
   const params = useParams<{ id: string; roundId: string }>();
@@ -23,14 +23,13 @@ export default function CreateFieldPage() {
 
   const [token, setToken] = useState<string | null>(null);
   const [question, setQuestion] = useState("");
+  const [description, setDescription] = useState("");
   const [type, setType] = useState<SubType>("shortText");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // ✅ For multiple choice options
   const [options, setOptions] = useState<string[]>(["", ""]);
 
-  // load token only in the browser
   useEffect(() => {
     setToken(localStorage.getItem("token"));
   }, []);
@@ -41,7 +40,6 @@ export default function CreateFieldPage() {
     ? "Field Title must be at least 5 characters"
     : null;
 
-  // ✅ Validation for multiple choice
   const optionsError =
     type === "multipleChoice" || type === "singleChoice"
       ? options.filter((opt) => opt.trim()).length < 2
@@ -49,19 +47,16 @@ export default function CreateFieldPage() {
         : null
       : null;
 
-  // ✅ Add option
   const addOption = () => {
     setOptions([...options, ""]);
   };
 
-  // ✅ Remove option
   const removeOption = (index: number) => {
     if (options.length > 2) {
       setOptions(options.filter((_, i) => i !== index));
     }
   };
 
-  // ✅ Update option
   const updateOption = (index: number, value: string) => {
     const newOptions = [...options];
     newOptions[index] = value;
@@ -82,13 +77,25 @@ export default function CreateFieldPage() {
     try {
       setLoading(true);
 
-      // ✅ Prepare payload based on field type
       const payload: any = {
         question: question.trim(),
         subType: type,
       };
 
-      // ✅ Add options for choice-based fields
+      // ✅ Add description if it has content
+      if (description) {
+        if (typeof description === "string") {
+          const stripped = description.replace(/<[^>]*>/g, "").trim();
+          if (stripped.length > 0 && description !== "<p></p>") {
+            payload.description = description;
+          }
+        } else if (typeof description === "object") {
+          // Store Tiptap JSON as-is
+          payload.description = description;
+        }
+      }
+
+      // ✅ Add options for choice fields
       if (type === "multipleChoice" || type === "singleChoice") {
         payload.options = options.filter((opt) => opt.trim());
       }
@@ -110,7 +117,6 @@ export default function CreateFieldPage() {
         throw new Error(data?.error || "Failed to create field");
       }
 
-      // go back to the round details
       router.push(`/admin/processes/${processId}/rounds/${roundId}`);
     } catch (err: any) {
       setErrorMsg(err?.message || "Failed to create field");
@@ -120,28 +126,27 @@ export default function CreateFieldPage() {
   }
 
   return (
-    <div className={`${openSans.className} mx-auto max-w-2xl p-4 md:p-8`}>
-      <h1 className="text-2xl font-semibold text-slate-900">Create Field</h1>
-      <p className="mt-1 text-sm text-slate-600">
-        Define the fields and choose the response type.
-      </p>
+    <div className={`${openSans.className} mx-auto max-w-4xl p-4 md:p-8`}>
+      <div className="mb-4">
+        <h1 className="text-2xl font-semibold text-slate-900">Create Field</h1>
+        <p className="mt-1 text-sm text-slate-600">
+          Define the fields and choose the response type.
+        </p>
+      </div>
 
       {errorMsg && (
-        <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {errorMsg}
         </div>
       )}
 
-      <form
-        onSubmit={handleSubmit}
-        className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
-      >
-        <fieldset disabled={loading} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <fieldset disabled={loading} className="space-y-6">
           {/* Question */}
-          <div>
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <label
               htmlFor="question"
-              className="block text-sm font-medium text-slate-800"
+              className="block text-sm font-medium text-slate-800 mb-2"
             >
               Field Title <span className="text-rose-600">*</span>
             </label>
@@ -151,7 +156,7 @@ export default function CreateFieldPage() {
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               placeholder="e.g. Why do you want to join us?"
-              className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 ${
+              className={`w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 ${
                 questionError
                   ? "border-rose-300 focus:ring-rose-400"
                   : "border-slate-200 focus:ring-blue-500"
@@ -159,7 +164,7 @@ export default function CreateFieldPage() {
               maxLength={240}
               autoFocus
             />
-            <div className="mt-1 flex items-center justify-between text-xs">
+            <div className="mt-2 flex items-center justify-between text-xs">
               <span
                 className={`${
                   questionError ? "text-rose-600" : "text-slate-500"
@@ -173,11 +178,31 @@ export default function CreateFieldPage() {
             </div>
           </div>
 
-          {/* Type */}
+          {/* Description (Optional - Rich Text Editor) */}
           <div>
+            <label className="block text-sm font-medium text-slate-800 mb-2">
+              Description{" "}
+              <span className="text-slate-400 text-xs font-normal">
+                (Optional)
+              </span>
+            </label>
+            <p className="text-xs text-slate-600 mb-3">
+              Provide additional context or instructions for this field.
+            </p>
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <TiptapEditor
+                editable={true}
+                content={description}
+                onContentUpdate={setDescription}
+              />
+            </div>
+          </div>
+
+          {/* Type */}
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <label
               htmlFor="type"
-              className="block text-sm font-medium text-slate-800"
+              className="block text-sm font-medium text-slate-800 mb-2"
             >
               Response Type
             </label>
@@ -186,7 +211,6 @@ export default function CreateFieldPage() {
               value={type}
               onChange={(e) => {
                 setType(e.target.value as SubType);
-                // ✅ Reset options when switching to/from choice types
                 if (
                   e.target.value === "multipleChoice" ||
                   e.target.value === "singleChoice"
@@ -194,30 +218,28 @@ export default function CreateFieldPage() {
                   setOptions(["", ""]);
                 }
               }}
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="shortText">Short Text</option>
               <option value="longText">Long Text</option>
               <option value="fileUpload">File Upload</option>
               <option value="singleChoice">Single Choice</option>
               <option value="multipleChoice">Multiple Choice</option>
-              {/* <option value="codeEditor">Code Editor</option> */}
             </select>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-slate-500">
               {type === "shortText" && "Single line text input (max 500 chars)"}
               {type === "longText" && "Multi-line text area (max 5000 chars)"}
               {type === "fileUpload" && "Allow candidates to upload files"}
               {type === "singleChoice" && "Radio buttons - select one option"}
               {type === "multipleChoice" &&
                 "Checkboxes - select multiple options"}
-              {/* {type === "codeEditor" && "Code editor with syntax highlighting"} */}
             </p>
           </div>
 
-          {/* ✅ Options for Multiple/Single Choice */}
+          {/* Options for Multiple/Single Choice */}
           {(type === "multipleChoice" || type === "singleChoice") && (
-            <div>
-              <label className="block text-sm font-medium text-slate-800 mb-2">
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <label className="block text-sm font-medium text-slate-800 mb-3">
                 Options <span className="text-rose-600">*</span>
               </label>
               <div className="space-y-2">
@@ -246,17 +268,17 @@ export default function CreateFieldPage() {
               <button
                 type="button"
                 onClick={addOption}
-                className="mt-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                className="mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium"
               >
                 + Add Option
               </button>
               {optionsError && (
-                <p className="mt-1 text-xs text-rose-600">{optionsError}</p>
+                <p className="mt-2 text-xs text-rose-600">{optionsError}</p>
               )}
             </div>
           )}
 
-          {/* ✅ Additional Config for Long Text */}
+          {/* Additional Config for Long Text */}
           {type === "longText" && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="text-xs text-blue-700">
@@ -266,7 +288,7 @@ export default function CreateFieldPage() {
             </div>
           )}
 
-          {/* ✅ Additional Config for File Upload */}
+          {/* Additional Config for File Upload */}
           {type === "fileUpload" && (
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
               <p className="text-xs text-purple-700">
@@ -276,31 +298,21 @@ export default function CreateFieldPage() {
             </div>
           )}
 
-          {/* ✅ Additional Config for Code Editor - COMMENTED OUT */}
-          {/* {type === "codeEditor" && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <p className="text-xs text-green-700">
-                <strong>Note:</strong> Code editor with syntax highlighting for
-                multiple languages (JavaScript, Python, Java, C++, etc.)
-              </p>
-            </div>
-          )} */}
-
           {/* Actions */}
-          <div className="flex items-center justify-end gap-2 pt-2">
+          <div className="flex items-center justify-center gap-2 pt-2">
             <button
               type="button"
               onClick={() =>
                 router.push(`/admin/processes/${processId}/rounds/${roundId}`)
               }
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="cursor-pointer rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || !!questionError || !!optionsError}
-              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+              className="cursor-pointer inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {loading ? (
                 <>

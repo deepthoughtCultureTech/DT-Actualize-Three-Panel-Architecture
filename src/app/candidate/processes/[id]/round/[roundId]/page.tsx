@@ -1,75 +1,41 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, ChangeEvent, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, EyeOff, Eye } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useIsLocked } from "../../Context";
-import Form from "@/components/rounds/Form";
-import Instructions from "@/components/rounds/Instructions";
+import { motion } from "framer-motion";
 
-interface Field {
-  _id: string;
-  question: string;
-  subType:
-    | "shortText"
-    | "longText"
-    | "fileUpload"
-    | "singleChoice"
-    | "multipleChoice";
-  options: string[]; // ✅ For choice-based fields
-}
-
-interface Upload {
-  url: string;
-  type: "image" | "audio";
-}
-
-interface Round {
-  _id: string;
-  order: number;
-  title: string;
-  type: "form" | "instruction" | "hybrid";
-  fields?: Field[];
-  instruction?: string;
-  uploads?: Upload[];
-}
+import StarterKit from "@tiptap/starter-kit";
+import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 
 export default function RoundSubmissionPage() {
   const { id, roundId } = useParams<{ id: string; roundId: string }>();
   const router = useRouter();
   const isLocked = useIsLocked();
-
-  const [rounds, setRounds] = useState<Round[]>([]);
-  const [round, setRound] = useState<Round | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [rounds, setRounds] = useState([] as any[]);
+  const [round, setRound] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [saving, setSaving] = useState(false);
-  const [showInstructions, setShowInstructions] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  // ✅ Fetch process + application answers
   useEffect(() => {
-    const fetchProcessAndAnswers = async () => {
+    async function fetchData() {
       try {
         const token = localStorage.getItem("token");
-
-        // fetch process
         const res = await fetch(`/api/candidate/processes/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch process");
         const process = await res.json();
-
         const sortedRounds = [...process.rounds].sort(
-          (a: Round, b: Round) => Number(a.order) - Number(b.order)
+          (a, b) => a.order - b.order
         );
         setRounds(sortedRounds);
-
         const selected = sortedRounds.find((r) => r._id === roundId);
         setRound(selected || null);
-
-        // fetch application answers
         const appRes = await fetch(`/api/candidate/applications`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -77,32 +43,29 @@ export default function RoundSubmissionPage() {
           const apps = await appRes.json();
           const app = apps.find((a: any) => a.process._id === id);
           if (app) {
-            const roundProgress = app.rounds.find(
+            const roundData = app.rounds.find(
               (r: any) => r.roundId === roundId
             );
-            if (roundProgress && roundProgress.answers) {
-              const prefilled: Record<string, string | string[]> = {};
-              roundProgress.answers.forEach((ans: any) => {
-                prefilled[ans.fieldId] = ans.answer;
+            if (roundData?.answers) {
+              const resAnswers: any = {};
+              roundData.answers.forEach((a: any) => {
+                resAnswers[a.fieldId] = a.answer;
               });
-              setAnswers(prefilled);
+              setAnswers(resAnswers);
             }
           }
         }
-      } catch (err) {
-        console.error(err);
+      } catch (error) {
+        console.error(error);
       } finally {
         setLoading(false);
       }
-    };
-
-    if (id && roundId) fetchProcessAndAnswers();
+    }
+    if (id && roundId) fetchData();
   }, [id, roundId]);
 
-  // ✅ Autosave handler
   const handleChange = async (fieldId: string, value: string | string[]) => {
     setAnswers((prev) => ({ ...prev, [fieldId]: value }));
-
     try {
       setSaving(true);
       const token = localStorage.getItem("token");
@@ -112,75 +75,58 @@ export default function RoundSubmissionPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          answers: [{ fieldId, answer: value }],
-        }),
+        body: JSON.stringify({ answers: [{ fieldId, answer: value }] }),
       });
-    } catch (err) {
-      console.error("Autosave failed:", err);
+    } catch (error) {
+      console.error(error);
     } finally {
       setSaving(false);
     }
   };
 
-  // ✅ Validation helper
-  const isFieldAnswered = (field: Field): boolean => {
-    const answer = answers[field._id];
-
-    if (!answer) return false;
-
-    // For arrays (multipleChoice)
-    if (Array.isArray(answer)) {
-      return answer.length > 0;
-    }
-
-    // For strings
-    return answer.trim() !== "";
+  const isFieldAnswered = (field: any) => {
+    const val = answers[field._id];
+    if (!val) return false;
+    if (Array.isArray(val)) return val.length > 0;
+    return val.trim() !== "";
   };
 
-  // ✅ Full round submit
   const handleSubmit = async () => {
-    if ((round?.type === "form" || round?.type === "hybrid") && round.fields) {
-      const unansweredFields = round.fields.filter(
-        (field) => !isFieldAnswered(field)
-      );
-
-      if (unansweredFields.length > 0) {
-        // Scroll to first unanswered field and highlight
-        const firstFieldId = unansweredFields[0]._id;
-        const el = document.getElementById(firstFieldId);
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-
-        // Flash red border
-        unansweredFields.forEach((field) => {
-          const elem = document.getElementById(field._id);
-          if (elem) {
-            elem.classList.add("border-red-500");
-            setTimeout(() => elem.classList.remove("border-red-500"), 2000);
+    if (saving) {
+      // Do not submit if saving is in progress
+      return;
+    }
+    if (round?.fields) {
+      const unanswered = round.fields.filter((f: any) => !isFieldAnswered(f));
+      if (unanswered.length > 0) {
+        const firstId = unanswered[0]._id;
+        const el = document.getElementById(firstId);
+        if (el && scrollRef.current) {
+          const rect = el.getBoundingClientRect();
+          scrollRef.current.scrollTo({
+            top: rect.top + scrollRef.current.scrollTop - 20,
+            behavior: "smooth",
+          });
+        }
+        unanswered.forEach((f: any) => {
+          const e = document.getElementById(f._id);
+          if (e) {
+            e.classList.add("border-red-500");
+            setTimeout(() => e.classList.remove("border-red-500"), 2000);
           }
         });
-
-        // Show alert
-        alert(
-          `Please answer all required fields. ${unansweredFields.length} field(s) remaining.`
-        );
+        alert(`${unanswered.length} fields remaining`);
         return;
       }
     }
-
-    // ✅ Proceed with saving & submitting
     setSubmitting(true);
     try {
-      const payload =
-        round?.type === "form" || round?.type === "hybrid"
-          ? {
-              answers: Object.entries(answers).map(([fieldId, answer]) => ({
-                fieldId,
-                answer,
-              })),
-            }
-          : {};
-
+      const payload = {
+        answers: Object.entries(answers).map(([fid, answer]) => ({
+          fieldId: fid,
+          answer,
+        })),
+      };
       const res = await fetch(
         `/api/candidate/applications/${id}/round/${roundId}`,
         {
@@ -192,7 +138,6 @@ export default function RoundSubmissionPage() {
           body: JSON.stringify(payload),
         }
       );
-
       if (!res.ok) throw new Error("Submission failed");
 
       const currentIndex = rounds.findIndex((r) => r._id === roundId);
@@ -202,48 +147,38 @@ export default function RoundSubmissionPage() {
       } else {
         router.push(`/candidate/processes/${id}/whatsapp-group`);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(error);
       alert("Submission failed. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  // ✅ Back button handler
   const handleBack = () => {
-    if (currentRoundIndex === 1) {
-      router.push("/candidate/dashboard");
-    } else {
-      const prevRoundId = rounds[currentRoundIndex - 2]?._id;
-      if (prevRoundId) {
-        router.push(`/candidate/processes/${id}/round/${prevRoundId}`);
-      }
-    }
+    const idx = rounds.findIndex((r) => r._id === roundId);
+    if (idx === 0) router.push("/candidate/dashboard");
+    else router.push(`/candidate/processes/${id}/round/${rounds[idx - 1]._id}`);
   };
 
-  if (loading) {
+  if (loading)
     return (
-      <div className="flex h-screen items-center justify-center min-h-screen bg-gradient-to-b from-sky-500 to-blue-900">
-        <p className="text-white">Loading round...</p>
+      <div className="flex h-screen items-center justify-center bg-gradient-to-b from-sky-500 to-blue-900">
+        <p className="text-white">Loading...</p>
       </div>
     );
-  }
-
-  if (!round) {
+  if (!round)
     return (
-      <div className="flex h-screen items-center justify-center min-h-screen bg-gradient-to-b from-sky-500 to-blue-900">
-        <p className="text-white">Round not found</p>
+      <div className="flex h-screen items-center justify-center bg-gradient-to-b from-sky-500 to-blue-900">
+        <p className="text-white">No round found</p>
       </div>
     );
-  }
 
-  const currentRoundIndex = rounds.findIndex((r) => r._id === roundId) + 1;
+  const currentIdx = rounds.findIndex((r) => r._id === roundId) + 1;
 
   return (
-    <div className="h-[calc(100vh-64px)] w-[calc(100vw-240px)] bg-gradient-to-b px-6 from-sky-500 to-blue-900 text-gray-800">
-      <div className="container mx-auto py-6 flex flex-col h-full">
-        {/* ✅ Header */}
+    <div className="h-[calc(100vh-64px)] w-[calc(100vw-240px)] bg-gradient-to-b from-sky-500 to-blue-900 px-6 text-gray-800">
+      <div className="container mx-auto flex flex-col h-full py-6">
         <header className="text-center">
           <motion.main
             initial={{ opacity: 0 }}
@@ -257,118 +192,159 @@ export default function RoundSubmissionPage() {
           </motion.main>
         </header>
 
-        {/* ✅ Main Body */}
-        <motion.main
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="flex-1 flex flex-col md:flex-row gap-6 items-start justify-center"
+        {/* Single scrollable container */}
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto bg-white rounded-xl shadow-lg border border-gray-200 p-6 space-y-6"
+          style={{ minHeight: 0 }}
         >
-          {round.type === "instruction" && (
-            <Instructions
-              instruction={round.instruction}
-              uploads={round.uploads}
-            />
-          )}
+          {round.type === "form" &&
+            round.fields?.map((field: any) => {
+              const description = field.description
+                ? renderToReactElement({
+                    extensions: [StarterKit],
+                    content: field.description,
+                  })
+                : null;
+              const val =
+                answers[field._id] ||
+                (field.subType === "multipleChoice" ? [] : "");
 
-          {round.type === "form" && (
-            <Form
-              fields={round.fields}
-              answers={answers}
-              isLocked={isLocked}
-              onChange={handleChange}
-            />
-          )}
+              const handleInputChange = (
+                e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+              ) => {
+                handleChange(field._id, e.target.value);
+              };
 
-          {round.type === "hybrid" && (
-            <div className="w-full">
-              {/* Toggle */}
-              <div className="flex justify-end mb-2">
-                <button
-                  onClick={() => setShowInstructions((prev) => !prev)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 transition shadow-md"
+              const handleCheckboxChange = (option: string) => {
+                if (!Array.isArray(val)) return;
+                const updated = val.includes(option)
+                  ? val.filter((o: string) => o !== option)
+                  : [...val, option];
+                handleChange(field._id, updated);
+              };
+
+              const handleRadioChange = (option: string) => {
+                handleChange(field._id, option);
+              };
+
+              const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+                const file = e.target.files?.[0];
+                if (file) handleChange(field._id, file.name);
+              };
+
+              return (
+                <div
+                  key={field._id}
+                  id={field._id}
+                  className="p-4 border rounded-lg bg-gray-50 border-gray-300 space-y-2"
                 >
-                  {showInstructions ? (
-                    <>
-                      <EyeOff className="w-4 h-4" /> Hide Guidelines
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="w-4 h-4" /> View Guidelines
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Layout */}
-              <div className="flex flex-col md:flex-row w-full gap-6">
-                <div className="w-full">
-                  <Form
-                    fields={round.fields}
-                    answers={answers}
-                    isLocked={isLocked}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                {showInstructions && (
-                  <div className="w-3/6">
-                    <Instructions
-                      instruction={round.instruction}
-                      uploads={round.uploads}
-                    />
+                  <div className="font-semibold text-lg text-gray-900">
+                    {field.question}
                   </div>
-                )}
-              </div>
-            </div>
-          )}
-        </motion.main>
+                  {description && (
+                    <div className="prose prose-indigo text-gray-700">
+                      {description}
+                    </div>
+                  )}
 
-        {/* Navigation Buttons */}
-        <div className="flex justify-center gap-5 m-6 fixed bottom-0 mb-10 left-1/2 -translate-1/4  ml-10">
-          {currentRoundIndex !== 1 && (
+                  {field.subType === "shortText" && (
+                    <input
+                      type="text"
+                      className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                      value={val}
+                      disabled={isLocked}
+                      onChange={handleInputChange}
+                      placeholder="Answer"
+                    />
+                  )}
+                  {field.subType === "longText" && (
+                    <textarea
+                      rows={4}
+                      className="w-full p-3 border border-gray-300 rounded resize-y focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                      value={val}
+                      disabled={isLocked}
+                      onChange={handleInputChange}
+                      placeholder="Answer"
+                    />
+                  )}
+                  {field.subType === "singleChoice" && (
+                    <div className="flex flex-col gap-2">
+                      {field.options.map((opt: string) => (
+                        <label
+                          key={opt}
+                          className="flex items-center space-x-2 cursor-pointer"
+                        >
+                          <input
+                            type="radio"
+                            className="text-indigo-600"
+                            checked={val === opt}
+                            onChange={() => handleRadioChange(opt)}
+                            disabled={isLocked}
+                          />
+                          <span className="text-gray-900">{opt}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  {field.subType === "multipleChoice" && (
+                    <div className="flex flex-col gap-2">
+                      {field.options.map((opt: string) => (
+                        <label
+                          key={opt}
+                          className="flex items-center space-x-2 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            className="text-indigo-600"
+                            checked={Array.isArray(val) && val.includes(opt)}
+                            onChange={() => handleCheckboxChange(opt)}
+                            disabled={isLocked}
+                          />
+                          <span className="text-gray-900">{opt}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  {field.subType === "fileUpload" && (
+                    <input
+                      type="file"
+                      accept="image/*,audio/*"
+                      className="cursor-pointer"
+                      disabled={isLocked}
+                      onChange={handleFileChange}
+                    />
+                  )}
+                </div>
+              );
+            })}
+        </div>
+
+        {/* Navigation Buttons - centered within white container */}
+        <div className="mt-6 flex justify-center gap-4">
+          {currentIdx !== 1 && (
             <button
-              type="button"
               onClick={handleBack}
               disabled={submitting}
-              className="flex cursor-pointer items-center gap-2 px-6 py-3 rounded-lg border border-gray-300 text-gray-700 bg-white hover:bg-gray-100 transition disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-3 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 transition disabled:opacity-50"
             >
-              <ArrowLeft className="w-4 h-4" />
-              Previous Round
+              <ArrowLeft className="w-4 h-4" /> Previous Round
             </button>
           )}
-
-          {currentRoundIndex == rounds.length && (
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={saving || submitting}
-              className="flex cursor-pointer items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:scale-105 transition disabled:opacity-50"
-            >
-              {saving
-                ? "Saving..."
-                : submitting
-                ? "Submitting..."
-                : "Submit & Group Link"}
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          )}
-
-          {currentRoundIndex < rounds.length && (
-            <button
-              type="submit"
-              onClick={handleSubmit}
-              disabled={saving || submitting}
-              className="flex cursor-pointer items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-green-600 to-green-700 text-white shadow-md hover:scale-105 transition disabled:opacity-50"
-            >
-              {saving
-                ? "Saving..."
-                : submitting
-                ? "Submitting..."
-                : "Submit & Continue"}
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          )}
+          <button
+            onClick={handleSubmit}
+            disabled={saving || submitting}
+            className="flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:scale-105 transition disabled:opacity-50"
+          >
+            {saving
+              ? "Saving..."
+              : submitting
+              ? "Submitting..."
+              : currentIdx === rounds.length
+              ? "Submit & Group Link"
+              : "Submit & Continue"}
+            <ArrowRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>

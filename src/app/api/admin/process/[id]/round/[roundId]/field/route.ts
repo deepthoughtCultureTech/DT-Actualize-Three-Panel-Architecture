@@ -3,10 +3,7 @@ import { ObjectId } from "mongodb";
 import { verifyToken } from "@/utils/auth";
 import { connectDB } from "@/lib/db";
 
-export async function GET(
-  req: NextRequest,
-  { params }: any
-) {
+export async function GET(req: NextRequest, { params }: any) {
   try {
     // 🔹 Auth check
     const authHeader = req.headers.get("Authorization");
@@ -21,7 +18,7 @@ export async function GET(
     const { id: processId, roundId } = params;
     const db = await connectDB();
 
-    // Fetch process (no projection trick here, fetch whole doc)
+    // Fetch process
     const process = await db.collection("processes").findOne({
       _id: new ObjectId(processId),
     });
@@ -56,10 +53,7 @@ export async function GET(
   }
 }
 
-export async function POST(
-  req: NextRequest,
-  context: any
-) {
+export async function POST(req: NextRequest, context: any) {
   try {
     // 🔹 Auth check
     const authHeader = req.headers.get("Authorization");
@@ -72,16 +66,71 @@ export async function POST(
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
 
     const { id: processId, roundId } = await context.params;
-    const newField = await req.json();
+    const body = await req.json();
+
+    // ✅ Extract and validate fields
+    const { question, description, subType, options } = body;
+
+    // Validation
+    if (!question || !question.trim()) {
+      return NextResponse.json(
+        { error: "Question is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!subType) {
+      return NextResponse.json(
+        { error: "Field type is required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate options for choice fields
+    if (
+      (subType === "singleChoice" || subType === "multipleChoice") &&
+      (!options || !Array.isArray(options) || options.length < 2)
+    ) {
+      return NextResponse.json(
+        { error: "At least 2 options are required for choice fields" },
+        { status: 400 }
+      );
+    }
 
     const db = await connectDB();
 
-    // Create a field object with its own ObjectId
-    const field = { _id: new ObjectId(), ...newField };
+    // ✅ Create field object
+    const field: any = {
+      _id: new ObjectId(),
+      question: question.trim(),
+      subType,
+      createdAt: new Date(),
+    };
+
+    // ✅ Add description if it has content (handles both string and object)
+    if (description) {
+      if (typeof description === "string") {
+        const stripped = description.replace(/<[^>]*>/g, "").trim();
+        if (stripped.length > 0 && description !== "<p></p>") {
+          field.description = description;
+        }
+      } else if (typeof description === "object") {
+        // Store Tiptap JSON as-is
+        field.description = description;
+      }
+    }
+
+    // ✅ Add options for choice fields
+    if (subType === "singleChoice" || subType === "multipleChoice") {
+      field.options = options.filter((opt: string) => opt.trim());
+    }
 
     // 🔹 Push the new field into the correct round
     const result = await db.collection("processes").updateOne(
-      { _id: new ObjectId(processId), "rounds._id": new ObjectId(roundId).toString() },
+      {
+        _id: new ObjectId(processId),
+        "rounds._id": new ObjectId(roundId).toString(),
+      },
       { $push: { "rounds.$.fields": field } }
     );
 
