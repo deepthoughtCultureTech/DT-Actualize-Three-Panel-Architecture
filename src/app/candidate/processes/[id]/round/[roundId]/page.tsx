@@ -1,13 +1,164 @@
 "use client";
 
-import { useEffect, useState, ChangeEvent, useRef } from "react";
+import { useEffect, useState, ChangeEvent, useRef, memo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { useIsLocked } from "../../Context";
 import { motion } from "framer-motion";
 
 import StarterKit from "@tiptap/starter-kit";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
+
+// ✅ Field Renderer Component
+const FieldRenderer = memo<{
+  field: any;
+  value: string | string[];
+  isLocked: boolean;
+  onChange: (fieldId: string, value: string | string[]) => void;
+}>(({ field, value, isLocked, onChange }) => {
+  const description =
+    field.description?.content?.length > 0
+      ? renderToReactElement({
+          extensions: [StarterKit],
+          content: field.description,
+        })
+      : null;
+
+  const handleInputChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    onChange(field._id, e.target.value);
+  };
+
+  const handleCheckboxChange = (option: string) => {
+    if (!Array.isArray(value)) return;
+    const updated = value.includes(option)
+      ? value.filter((o: string) => o !== option)
+      : [...value, option];
+    onChange(field._id, updated);
+  };
+
+  const handleRadioChange = (option: string) => {
+    onChange(field._id, option);
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) onChange(field._id, file.name);
+  };
+
+  return (
+    <div
+      id={field._id}
+      className="p-4 border rounded-lg bg-gray-50 border-gray-300 space-y-2"
+    >
+      <div className="font-semibold text-lg text-gray-900">
+        {field.question}
+      </div>
+      {description && (
+        <div className="prose prose-indigo text-gray-700">{description}</div>
+      )}
+
+      {field.subType === "shortText" && (
+        <input
+          type="text"
+          className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          value={value as string}
+          disabled={isLocked}
+          onChange={handleInputChange}
+          placeholder="Answer"
+        />
+      )}
+
+      {field.subType === "longText" && (
+        <textarea
+          rows={4}
+          className="w-full p-3 border border-gray-300 rounded resize-y focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          value={value as string}
+          disabled={isLocked}
+          onChange={handleInputChange}
+          placeholder="Answer"
+        />
+      )}
+
+      {field.subType === "singleChoice" && (
+        <div className="flex flex-col gap-2">
+          {field.options?.map((opt: string) => (
+            <label
+              key={opt}
+              className="flex items-center space-x-2 cursor-pointer"
+            >
+              <input
+                type="radio"
+                className="text-indigo-600"
+                checked={value === opt}
+                onChange={() => handleRadioChange(opt)}
+                disabled={isLocked}
+              />
+              <span className="text-gray-900">{opt}</span>
+            </label>
+          ))}
+        </div>
+      )}
+
+      {field.subType === "multipleChoice" && (
+        <div className="flex flex-col gap-2">
+          {field.options?.map((opt: string) => (
+            <label
+              key={opt}
+              className="flex items-center space-x-2 cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                className="text-indigo-600"
+                checked={Array.isArray(value) && value.includes(opt)}
+                onChange={() => handleCheckboxChange(opt)}
+                disabled={isLocked}
+              />
+              <span className="text-gray-900">{opt}</span>
+            </label>
+          ))}
+        </div>
+      )}
+
+      {field.subType === "fileUpload" && (
+        <input
+          type="file"
+          accept="image/*,audio/*"
+          className="cursor-pointer"
+          disabled={isLocked}
+          onChange={handleFileChange}
+        />
+      )}
+    </div>
+  );
+});
+
+FieldRenderer.displayName = "FieldRenderer";
+
+// ✅ Instructions Component
+const InstructionRenderer = memo<{ instruction: any }>(({ instruction }) => {
+  const instructionContent =
+    instruction?.content?.length > 0
+      ? renderToReactElement({
+          extensions: [StarterKit],
+          content: instruction,
+        })
+      : null;
+
+  if (!instructionContent) return null;
+
+  return (
+    <div className="p-6 border rounded-lg bg-blue-50 border-blue-200">
+      <h3 className="text-lg font-semibold text-gray-900 mb-3">
+        📋 Instructions
+      </h3>
+      <div className="prose prose-indigo max-w-none">{instructionContent}</div>
+    </div>
+  );
+});
+
+InstructionRenderer.displayName = "InstructionRenderer";
 
 export default function RoundSubmissionPage() {
   const { id, roundId } = useParams<{ id: string; roundId: string }>();
@@ -20,6 +171,7 @@ export default function RoundSubmissionPage() {
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
@@ -30,12 +182,15 @@ export default function RoundSubmissionPage() {
         });
         if (!res.ok) throw new Error("Failed to fetch process");
         const process = await res.json();
+
         const sortedRounds = [...process.rounds].sort(
           (a, b) => a.order - b.order
         );
         setRounds(sortedRounds);
+
         const selected = sortedRounds.find((r) => r._id === roundId);
         setRound(selected || null);
+
         const appRes = await fetch(`/api/candidate/applications`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -56,7 +211,7 @@ export default function RoundSubmissionPage() {
           }
         }
       } catch (error) {
-        console.error(error);
+        console.error("❌ Fetch error:", error);
       } finally {
         setLoading(false);
       }
@@ -92,33 +247,17 @@ export default function RoundSubmissionPage() {
   };
 
   const handleSubmit = async () => {
-    if (saving) {
-      // Do not submit if saving is in progress
-      return;
-    }
-    if (round?.fields) {
+    if (saving) return;
+
+    // Only validate if round has fields
+    if ((round?.type === "form" || round?.type === "hybrid") && round?.fields) {
       const unanswered = round.fields.filter((f: any) => !isFieldAnswered(f));
       if (unanswered.length > 0) {
-        const firstId = unanswered[0]._id;
-        const el = document.getElementById(firstId);
-        if (el && scrollRef.current) {
-          const rect = el.getBoundingClientRect();
-          scrollRef.current.scrollTo({
-            top: rect.top + scrollRef.current.scrollTop - 20,
-            behavior: "smooth",
-          });
-        }
-        unanswered.forEach((f: any) => {
-          const e = document.getElementById(f._id);
-          if (e) {
-            e.classList.add("border-red-500");
-            setTimeout(() => e.classList.remove("border-red-500"), 2000);
-          }
-        });
         alert(`${unanswered.length} fields remaining`);
         return;
       }
     }
+
     setSubmitting(true);
     try {
       const payload = {
@@ -167,6 +306,7 @@ export default function RoundSubmissionPage() {
         <p className="text-white">Loading...</p>
       </div>
     );
+
   if (!round)
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-to-b from-sky-500 to-blue-900">
@@ -184,7 +324,6 @@ export default function RoundSubmissionPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.5 }}
-            className="flex-1 flex items-center justify-center"
           >
             <h1 className="mb-6 text-4xl font-bold text-white drop-shadow-md">
               {round.title}
@@ -192,135 +331,88 @@ export default function RoundSubmissionPage() {
           </motion.main>
         </header>
 
-        {/* Single scrollable container */}
         <div
           ref={scrollRef}
           className="flex-1 overflow-y-auto bg-white rounded-xl shadow-lg border border-gray-200 p-6 space-y-6"
           style={{ minHeight: 0 }}
         >
+          {/* ✅ Type 1: INSTRUCTION ONLY */}
+          {round.type === "instruction" && (
+            <InstructionRenderer instruction={round.instruction} />
+          )}
+
+          {/* ✅ Type 2: FORM ONLY */}
           {round.type === "form" &&
             round.fields?.map((field: any) => {
-              const description = field.description
-                ? renderToReactElement({
-                    extensions: [StarterKit],
-                    content: field.description,
-                  })
-                : null;
               const val =
                 answers[field._id] ||
                 (field.subType === "multipleChoice" ? [] : "");
-
-              const handleInputChange = (
-                e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-              ) => {
-                handleChange(field._id, e.target.value);
-              };
-
-              const handleCheckboxChange = (option: string) => {
-                if (!Array.isArray(val)) return;
-                const updated = val.includes(option)
-                  ? val.filter((o: string) => o !== option)
-                  : [...val, option];
-                handleChange(field._id, updated);
-              };
-
-              const handleRadioChange = (option: string) => {
-                handleChange(field._id, option);
-              };
-
-              const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-                const file = e.target.files?.[0];
-                if (file) handleChange(field._id, file.name);
-              };
-
               return (
-                <div
+                <FieldRenderer
                   key={field._id}
-                  id={field._id}
-                  className="p-4 border rounded-lg bg-gray-50 border-gray-300 space-y-2"
-                >
-                  <div className="font-semibold text-lg text-gray-900">
-                    {field.question}
-                  </div>
-                  {description && (
-                    <div className="prose prose-indigo text-gray-700">
-                      {description}
-                    </div>
-                  )}
-
-                  {field.subType === "shortText" && (
-                    <input
-                      type="text"
-                      className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                      value={val}
-                      disabled={isLocked}
-                      onChange={handleInputChange}
-                      placeholder="Answer"
-                    />
-                  )}
-                  {field.subType === "longText" && (
-                    <textarea
-                      rows={4}
-                      className="w-full p-3 border border-gray-300 rounded resize-y focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                      value={val}
-                      disabled={isLocked}
-                      onChange={handleInputChange}
-                      placeholder="Answer"
-                    />
-                  )}
-                  {field.subType === "singleChoice" && (
-                    <div className="flex flex-col gap-2">
-                      {field.options.map((opt: string) => (
-                        <label
-                          key={opt}
-                          className="flex items-center space-x-2 cursor-pointer"
-                        >
-                          <input
-                            type="radio"
-                            className="text-indigo-600"
-                            checked={val === opt}
-                            onChange={() => handleRadioChange(opt)}
-                            disabled={isLocked}
-                          />
-                          <span className="text-gray-900">{opt}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                  {field.subType === "multipleChoice" && (
-                    <div className="flex flex-col gap-2">
-                      {field.options.map((opt: string) => (
-                        <label
-                          key={opt}
-                          className="flex items-center space-x-2 cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            className="text-indigo-600"
-                            checked={Array.isArray(val) && val.includes(opt)}
-                            onChange={() => handleCheckboxChange(opt)}
-                            disabled={isLocked}
-                          />
-                          <span className="text-gray-900">{opt}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                  {field.subType === "fileUpload" && (
-                    <input
-                      type="file"
-                      accept="image/*,audio/*"
-                      className="cursor-pointer"
-                      disabled={isLocked}
-                      onChange={handleFileChange}
-                    />
-                  )}
-                </div>
+                  field={field}
+                  value={val}
+                  isLocked={isLocked}
+                  onChange={handleChange}
+                />
               );
             })}
+
+          {/* ✅ Type 3: HYBRID (Instruction + Form) */}
+          {round.type === "hybrid" && (
+            <div className="space-y-6">
+              {/* Toggle for instructions */}
+              {round.instruction?.content?.length > 0 && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setShowInstructions(!showInstructions)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  >
+                    {showInstructions ? (
+                      <>
+                        <EyeOff className="w-4 h-4" /> Hide Instructions
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-4 h-4" /> Show Instructions
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Instructions */}
+              {showInstructions && (
+                <InstructionRenderer instruction={round.instruction} />
+              )}
+
+              {/* Form Fields */}
+              {round.fields?.map((field: any) => {
+                const val =
+                  answers[field._id] ||
+                  (field.subType === "multipleChoice" ? [] : "");
+                return (
+                  <FieldRenderer
+                    key={field._id}
+                    field={field}
+                    value={val}
+                    isLocked={isLocked}
+                    onChange={handleChange}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!round.fields?.length && round.type !== "instruction" && (
+            <div className="text-center text-gray-500 py-8">
+              <p>No content available for this round.</p>
+            </div>
+          )}
         </div>
 
-        {/* Navigation Buttons - centered within white container */}
+        {/* Navigation Buttons */}
         <div className="mt-6 flex justify-center gap-4">
           {currentIdx !== 1 && (
             <button
