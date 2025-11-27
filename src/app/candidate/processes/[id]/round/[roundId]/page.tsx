@@ -6,8 +6,8 @@ import { ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { useIsLocked } from "../../Context";
 import { motion } from "framer-motion";
 
-import StarterKit from "@tiptap/starter-kit";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
+import { tiptapExtensions } from "@/components/tiptap/TiptapEditor"; // ✅ Import YOUR extensions
 
 // ✅ Field Renderer Component
 const FieldRenderer = memo<{
@@ -19,7 +19,7 @@ const FieldRenderer = memo<{
   const description =
     field.description?.content?.length > 0
       ? renderToReactElement({
-          extensions: [StarterKit],
+          extensions: tiptapExtensions, // ✅ Use YOUR extensions
           content: field.description,
         })
       : null;
@@ -56,7 +56,9 @@ const FieldRenderer = memo<{
         {field.question}
       </div>
       {description && (
-        <div className="prose prose-indigo text-gray-700">{description}</div>
+        <div className="prose prose-indigo text-gray-700 max-w-none">
+          {description}
+        </div>
       )}
 
       {field.subType === "shortText" && (
@@ -141,7 +143,7 @@ const InstructionRenderer = memo<{ instruction: any }>(({ instruction }) => {
   const instructionContent =
     instruction?.content?.length > 0
       ? renderToReactElement({
-          extensions: [StarterKit],
+          extensions: tiptapExtensions, // ✅ Use YOUR extensions
           content: instruction,
         })
       : null;
@@ -249,7 +251,6 @@ export default function RoundSubmissionPage() {
   const handleSubmit = async () => {
     if (saving) return;
 
-    // Only validate if round has fields
     if ((round?.type === "form" || round?.type === "hybrid") && round?.fields) {
       const unanswered = round.fields.filter((f: any) => !isFieldAnswered(f));
       if (unanswered.length > 0) {
@@ -336,12 +337,10 @@ export default function RoundSubmissionPage() {
           className="flex-1 overflow-y-auto bg-white rounded-xl shadow-lg border border-gray-200 p-6 space-y-6"
           style={{ minHeight: 0 }}
         >
-          {/* ✅ Type 1: INSTRUCTION ONLY */}
           {round.type === "instruction" && (
             <InstructionRenderer instruction={round.instruction} />
           )}
 
-          {/* ✅ Type 2: FORM ONLY */}
           {round.type === "form" &&
             round.fields?.map((field: any) => {
               const val =
@@ -358,10 +357,8 @@ export default function RoundSubmissionPage() {
               );
             })}
 
-          {/* ✅ Type 3: HYBRID (Instruction + Form) */}
           {round.type === "hybrid" && (
             <div className="space-y-6">
-              {/* Toggle for instructions */}
               {round.instruction?.content?.length > 0 && (
                 <div className="flex justify-end">
                   <button
@@ -381,12 +378,10 @@ export default function RoundSubmissionPage() {
                 </div>
               )}
 
-              {/* Instructions */}
               {showInstructions && (
                 <InstructionRenderer instruction={round.instruction} />
               )}
 
-              {/* Form Fields */}
               {round.fields?.map((field: any) => {
                 const val =
                   answers[field._id] ||
@@ -404,7 +399,6 @@ export default function RoundSubmissionPage() {
             </div>
           )}
 
-          {/* Empty state */}
           {!round.fields?.length && round.type !== "instruction" && (
             <div className="text-center text-gray-500 py-8">
               <p>No content available for this round.</p>
@@ -412,7 +406,6 @@ export default function RoundSubmissionPage() {
           )}
         </div>
 
-        {/* Navigation Buttons */}
         <div className="mt-6 flex justify-center gap-4">
           {currentIdx !== 1 && (
             <button
