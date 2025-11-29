@@ -25,8 +25,8 @@ function formatDateIST(dateString: string): string {
       month: "2-digit",
       year: "numeric",
     });
-  } catch (error) {
-    return "Invalid date";
+  } catch (error: any) {
+    return `Invalid Date: ${error.message}`;
   }
 }
 

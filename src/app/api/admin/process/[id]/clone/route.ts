@@ -6,9 +6,12 @@ import { getAdminById } from "@/lib/adminService";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> } // ✅ Promise<>
 ) {
   try {
+    // ✅ Await params
+    const { id } = await params; // ✅ NEW LINE
+
     // ✅ Auth check
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
@@ -32,7 +35,7 @@ export async function POST(
     // ✅ Parse request body
     const { title } = await req.json();
     const db = await connectDB();
-    const processId = new ObjectId(params.id);
+    const processId = new ObjectId(id); // ✅ Use awaited id
 
     // ✅ Fetch original process (with all fields)
     const original = await db
