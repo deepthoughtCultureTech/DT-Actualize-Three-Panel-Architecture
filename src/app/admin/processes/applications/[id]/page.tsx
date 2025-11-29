@@ -15,6 +15,21 @@ import BlockDurationModal from "@/components/admin/BlockDurationModal";
 
 const PURPLE = "#3E00FF";
 
+// ✅ Format date in IST
+function formatDateIST(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  } catch (error) {
+    return "Invalid date";
+  }
+}
+
 function StatusBadge({ status }: { status: string }) {
   switch (status) {
     case "completed":
@@ -94,7 +109,7 @@ function RoundProgress({
   );
 }
 
-// ✅ Enhanced Timeline Status Component
+// ✅ Enhanced Timeline Status Component - Using backend data with IST formatting
 function TimelineStatus({
   hasExpired,
   currentRound,
@@ -108,7 +123,7 @@ function TimelineStatus({
     return <span className="text-xs text-gray-400">No deadline</span>;
   }
 
-  if (hasExpired) {
+  if (hasExpired || timeRemaining?.expired) {
     return (
       <div className="flex flex-col items-center gap-1">
         <div className="flex items-center gap-1 text-red-600">
@@ -116,7 +131,7 @@ function TimelineStatus({
           <span className="text-xs font-semibold">Expired</span>
         </div>
         <span className="text-xs text-gray-500">
-          {new Date(currentRound.timelineDate).toLocaleDateString()}
+          {formatDateIST(currentRound.timelineDate)}
         </span>
       </div>
     );
@@ -139,7 +154,7 @@ function TimelineStatus({
           </span>
         </div>
         <span className="text-xs text-gray-500">
-          {new Date(currentRound.timelineDate).toLocaleDateString()}
+          {formatDateIST(currentRound.timelineDate)}
         </span>
       </div>
     );
@@ -148,7 +163,7 @@ function TimelineStatus({
   return (
     <div className="flex flex-col items-center">
       <span className="text-xs text-gray-600">
-        {new Date(currentRound.timelineDate).toLocaleDateString()}
+        {formatDateIST(currentRound.timelineDate)}
       </span>
     </div>
   );
@@ -256,12 +271,16 @@ export default function ApplicantsPage() {
             ? `${Math.floor(durationHours / 24)} day(s) ${durationHours % 24}h`
             : `${durationHours} hour(s)`;
 
+        // ✅ Format blocked until date in IST
+        const blockedUntilDate = new Date(response.data.blockedUntil);
+        const blockedUntilIST = blockedUntilDate.toLocaleString("en-IN", {
+          timeZone: "Asia/Kolkata",
+          dateStyle: "medium",
+          timeStyle: "short",
+        });
+
         alert(
-          `${
-            selectedApplicant.name
-          } has been blocked for ${durationText}\n\nBlocked until: ${new Date(
-            response.data.blockedUntil
-          ).toLocaleString()}`
+          `${selectedApplicant.name} has been blocked for ${durationText}\n\nBlocked until: ${blockedUntilIST}`
         );
 
         setShowBlockModal(false);
@@ -496,7 +515,7 @@ export default function ApplicantsPage() {
                         />
                       </td>
 
-                      {/* ✅ Timeline Status */}
+                      {/* ✅ Timeline Status - with IST formatting */}
                       <td className="px-4 py-3">
                         <TimelineStatus
                           hasExpired={a.hasExpiredTimeline}
