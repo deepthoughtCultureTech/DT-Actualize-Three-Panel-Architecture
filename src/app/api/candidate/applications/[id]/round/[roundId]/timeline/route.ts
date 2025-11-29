@@ -121,7 +121,7 @@ export async function PATCH(req: NextRequest, context: any) {
     const roundId = params.roundId;
 
     const body = await req.json();
-    const { timeline } = body;
+    const { timeline, timelineDate } = body; // ✅ Receive both
 
     if (!timeline || typeof timeline !== "string") {
       return NextResponse.json(
@@ -130,12 +130,19 @@ export async function PATCH(req: NextRequest, context: any) {
       );
     }
 
-    // ✅ Parse string to Date object
-    const timelineDate = parseTimelineToDate(timeline);
-
-    if (!timelineDate) {
+    if (!timelineDate || typeof timelineDate !== "string") {
       return NextResponse.json(
-        { error: "Invalid timeline format" },
+        { error: "Timeline date is required and must be an ISO string" },
+        { status: 400 }
+      );
+    }
+
+    // ✅ Use the ISO string directly instead of parsing the formatted string
+    const timelineDateObj = new Date(timelineDate);
+
+    if (isNaN(timelineDateObj.getTime())) {
+      return NextResponse.json(
+        { error: "Invalid timeline date format" },
         { status: 400 }
       );
     }
@@ -165,8 +172,9 @@ export async function PATCH(req: NextRequest, context: any) {
       },
       {
         $set: {
-          "rounds.$.timeline": timeline,
-          "rounds.$.timelineDate": timelineDate,
+          "rounds.$.timeline": timeline, // Display: "29 Nov 2025, 11:33 pm"
+          "rounds.$.timelineDate": timelineDateObj, // Calculation: Date object
+          "rounds.$.status": "in-progress", // Mark as started
           updatedAt: new Date(),
         },
       }
@@ -184,7 +192,7 @@ export async function PATCH(req: NextRequest, context: any) {
         success: true,
         message: "Timeline saved successfully",
         timeline,
-        timelineDate: timelineDate.toISOString(),
+        timelineDate: timelineDateObj.toISOString(),
       },
       { status: 200 }
     );

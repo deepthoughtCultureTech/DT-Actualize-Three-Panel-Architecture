@@ -3,7 +3,10 @@ import { formatEndTime } from "../../lib/utils";
 
 interface TimerModalProps {
   isOpen: boolean;
-  onTimelineSet: (hours: string) => void;
+  onTimelineSet: (timelineData: {
+    timeline: string;
+    timelineDate: string;
+  }) => void;
   isSubmitting?: boolean;
 }
 
@@ -13,15 +16,28 @@ const TimerModal: React.FC<TimerModalProps> = ({
   isSubmitting,
 }) => {
   const [customHours, setCustomHours] = useState<number>(24);
-  //const { showToast } = useToast();
 
   const handleSetTimeline = () => {
+    // ✅ Create deadline in UTC (works everywhere)
+
     const endTime = new Date(Date.now() + customHours * 60 * 60 * 1000);
-    const formatted = endTime.toLocaleString("en-IN", {
-      dateStyle: "medium",
-      timeStyle: "short",
+
+    // ✅ Format for display in IST
+    const formattedIST = endTime.toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
     });
-    onTimelineSet(formatted);
+
+    // ✅ Send both ISO and formatted
+    onTimelineSet({
+      timeline: formattedIST,
+      timelineDate: endTime.toISOString(),
+    });
   };
 
   const quickOptions = [
@@ -37,7 +53,6 @@ const TimerModal: React.FC<TimerModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-3xl p-8 shadow-2xl max-w-md w-full text-center space-y-8 border border-gray-100">
-        {/* Header */}
         <div className="space-y-2">
           <h2 className="text-2xl font-bold text-gray-900">
             Self-Defined Timeline
@@ -47,7 +62,6 @@ const TimerModal: React.FC<TimerModalProps> = ({
           </p>
         </div>
 
-        {/* Quick Options */}
         <div className="space-y-4">
           <div className="flex flex-wrap justify-center gap-2">
             {quickOptions.map((option) => (
@@ -66,7 +80,6 @@ const TimerModal: React.FC<TimerModalProps> = ({
           </div>
         </div>
 
-        {/* Timeline End Display */}
         <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-4 border border-blue-100">
           <p className="text-sm text-gray-600 mb-1">Your timeline will end:</p>
           <p className="text-lg font-bold text-gray-900">
@@ -74,7 +87,6 @@ const TimerModal: React.FC<TimerModalProps> = ({
           </p>
         </div>
 
-        {/* Custom Timeline Selector */}
         <div className="space-y-4">
           <p className="text-sm font-medium text-gray-700">Or customize:</p>
           <div className="space-y-3">
@@ -106,11 +118,10 @@ const TimerModal: React.FC<TimerModalProps> = ({
           </div>
         </div>
 
-        {/* Confirm Button */}
         <button
           onClick={handleSetTimeline}
           disabled={isSubmitting}
-          className={`w-full  px-6 py-4 rounded-2xl font-semibold transition-all duration-200 shadow-lg shadow-blue-600/25 hover:shadow-xl hover:shadow-blue-600/30 hover:scale-[1.02] ${
+          className={`w-full px-6 py-4 rounded-2xl font-semibold transition-all duration-200 shadow-lg shadow-blue-600/25 hover:shadow-xl hover:shadow-blue-600/30 hover:scale-[1.02] ${
             isSubmitting
               ? "bg-secondary cursor-not-allowed"
               : "bg-blue-600 hover:bg-blue-800 cursor-pointer text-white"

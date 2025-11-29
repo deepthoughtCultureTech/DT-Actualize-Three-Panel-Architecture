@@ -138,7 +138,11 @@ export default function RoundLayout({
   };
 
   // Save timeline for specific round and update state map
-  const saveTimeline = async (data: string) => {
+  // Save timeline for specific round and update state map
+  const saveTimeline = async (data: {
+    timeline: string;
+    timelineDate: string;
+  }) => {
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem("token");
@@ -150,14 +154,17 @@ export default function RoundLayout({
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ timeline: data }),
+          body: JSON.stringify({
+            timeline: data.timeline, // Display string
+            timelineDate: data.timelineDate, // ISO string for calculation
+          }),
         }
       );
       if (!response.ok) {
         throw new Error("Failed to save timeline");
       }
 
-      setTimeline(data);
+      setTimeline(data.timeline); // Update local state with display string
       setShowTimelineModal(false);
     } catch (err) {
       console.error("Error saving timeline:", err);
