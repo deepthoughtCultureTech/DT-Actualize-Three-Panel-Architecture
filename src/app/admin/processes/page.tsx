@@ -94,6 +94,34 @@ export default function AdminProcessesPage() {
     }
   }
 
+  // ✅ CLONE HANDLER
+  async function handleClone(processId: string, processTitle: string) {
+    if (!confirm(`Clone "${processTitle}" as new draft process?`)) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return alert("You are not logged in.");
+
+      const res = await fetch(`/api/admin/process/${processId}/clone`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title: `${processTitle} (Copy)` }), // New title
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to clone process");
+
+      alert(`✅ "${data.title}" cloned successfully!`);
+      fetchProcesses(); // Refresh list
+    } catch (err: any) {
+      console.error("Clone failed:", err);
+      alert(`❌ Clone failed: ${err.message}`);
+    }
+  }
+
   async function handleDelete(id: string) {
     if (!confirm("Delete this process?")) return;
     try {
@@ -296,6 +324,16 @@ export default function AdminProcessesPage() {
                           <IconSettings className="h-4 w-4" />
                           Manage
                         </Link>
+
+                        {/* ✅ NEW CLONE BUTTON */}
+                        <button
+                          onClick={() => handleClone(p._id, p.title)}
+                          className="inline-flex items-center cursor-pointer gap-2 rounded-lg border border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 hover:shadow-sm hover:border-blue-300 transition-all"
+                          title="Clone as Draft"
+                        >
+                          Clone
+                        </button>
+
                         <Link
                           href={`/admin/processes/applications/${p._id}`}
                           className="inline-flex items-center cursor-pointer gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"

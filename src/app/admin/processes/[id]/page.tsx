@@ -27,13 +27,6 @@ function IconPublish(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
-// function IconEye(props: React.SVGProps<SVGSVGElement>) {
-//   return (
-//     <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
-//       <path fill="currentColor" d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7Zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10Z" />
-//     </svg>
-//   );
-// }
 function IconEdit(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
@@ -64,13 +57,6 @@ function IconInstruction(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
-// function IconTrash(props: React.SVGProps<SVGSVGElement>) {
-//   return (
-//     <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
-//       <path fill="currentColor" d="M9 3h6a1 1 0 0 1 1 1v1h4v2H4V5h4V4a1 1 0 0 1 1-1m1 5h2v10h-2zm-4 0h2v10H6zm8 0h2v10h-2z" />
-//     </svg>
-//   );
-// }
 function IconPlus(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
@@ -112,11 +98,7 @@ export default function ProcessDetailsPage() {
     if (id) fetchProcess();
   }, [id]);
 
-  // --- Round Actions (lifted from your RoundsPage) ---
-  // const handleView = (roundId: string) => {
-  //   router.push(`/admin/processes/${id}/rounds/${roundId}`);
-  // };
-
+  // --- Round Actions (UNCHANGED) ---
   const handleEdit = (roundId: string) => {
     router.push(`/admin/processes/${id}/rounds/${roundId}/edit`);
   };
@@ -186,7 +168,7 @@ export default function ProcessDetailsPage() {
 
   return (
     <div className="mx-auto max-w-5xl p-4 md:p-8">
-      {/* Header card */}
+      {/* Header card - ✅ ONLY ADDED EDIT BUTTON */}
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
@@ -207,6 +189,14 @@ export default function ProcessDetailsPage() {
           </div>
           {!isPublished && (
             <div className="flex flex-wrap gap-2">
+              {/* ✅ NEW: Edit Process Button */}
+              <button
+                onClick={() => router.push(`/admin/processes/${id}/edit`)}
+                className="inline-flex items-center gap-2 cursor-pointer rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+              >
+                <IconEdit className="h-4 w-4" />
+                Edit Process
+              </button>
               <button
                 onClick={() => router.push(`/admin/processes/${id}/publish`)}
                 className="cursor-pointer inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
@@ -228,9 +218,8 @@ export default function ProcessDetailsPage() {
         )}
       </div>
 
-      {/* Rounds table + actions inline */}
+      {/* Rounds table + actions inline - ✅ 100% UNCHANGED */}
       <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        {/* Table header with Create */}
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
           <h2 className="text-sm font-semibold text-slate-800">Rounds</h2>
           <button
