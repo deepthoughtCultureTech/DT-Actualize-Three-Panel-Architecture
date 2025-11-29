@@ -94,7 +94,7 @@ export default function CandidateAuthPage() {
         {blockInfo && (
           <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-5 mb-6">
             <h3 className="font-bold text-orange-900 text-base mb-2">
-              Account Temporarily Blocked
+              Account Blocked
             </h3>
             <p className="text-orange-800 text-sm mb-3 leading-relaxed">
               {blockInfo.message}
@@ -107,7 +107,7 @@ export default function CandidateAuthPage() {
                     <strong>Reason:</strong> {blockInfo.reason}
                   </p>
                 </div>
-                <div className="text-orange-700">
+                {/* <div className="text-orange-700">
                   <p className="text-xs">
                     <strong>Time remaining:</strong>{" "}
                     <span className="font-mono font-bold">
@@ -115,11 +115,11 @@ export default function CandidateAuthPage() {
                       {blockInfo.timeRemaining?.minutes}m
                     </span>
                   </p>
-                </div>
+                </div> */}
               </div>
             </div>
 
-            <div className="bg-orange-100 rounded-lg p-2.5 mb-3">
+            {/* <div className="bg-orange-100 rounded-lg p-2.5 mb-3">
               <p className="text-xs text-orange-800">
                 <strong>You can login again at:</strong>
                 <br />
@@ -134,44 +134,45 @@ export default function CandidateAuthPage() {
                   })}
                 </span>
               </p>
-            </div>
+            </div> */}
 
             {/* ✅ Admin Contacts - directly from blockInfo */}
+            {/* ✅ Show ONLY FIRST admin */}
             {blockInfo.adminContacts && blockInfo.adminContacts.length > 0 && (
               <div className="p-3 flex items-center">
                 <h4 className="text-sm font-bold mb-2 mr-2">Contact Admin:</h4>
-                <div className="space-y-2">
-                  {blockInfo.adminContacts.map((admin: any, idx: number) => (
-                    <div key={idx} className="rounded p-2">
-                      <div className="flex items-center gap-2 text-xs mb-1">
-                        <User className="w-3 h-3" />
-                        <span className="font-semibold">{admin.name}</span>
-                      </div>
-                      {admin.email && (
-                        <div className="flex items-center gap-2 text-xs mb-1">
-                          <Mail className="w-3 h-3" />
-                          <a
-                            href={`mailto:${admin.email}`}
-                            className="hover:underline"
-                          >
-                            {admin.email}
-                          </a>
-                        </div>
-                      )}
-                      {admin.phone && (
-                        <div className="flex items-center gap-2 text-xs">
-                          <Phone className="w-3 h-3" />
-                          <a
-                            href={`tel:${admin.phone}`}
-                            className="hover:underline"
-                          >
-                            {admin.phone}
-                          </a>
-                        </div>
-                      )}
+                {blockInfo.adminContacts[0] && ( // ✅ Only first admin
+                  <div className="rounded p-2">
+                    <div className="flex items-center gap-2 text-xs mb-1">
+                      <User className="w-3 h-3" />
+                      <span className="font-semibold">
+                        {blockInfo.adminContacts[0].name}
+                      </span>
                     </div>
-                  ))}
-                </div>
+                    {blockInfo.adminContacts[0].email && (
+                      <div className="flex items-center gap-2 text-xs mb-1">
+                        <Mail className="w-3 h-3" />
+                        <a
+                          href={`mailto:${blockInfo.adminContacts[0].email}`}
+                          className="hover:underline"
+                        >
+                          {blockInfo.adminContacts[0].email}
+                        </a>
+                      </div>
+                    )}
+                    {blockInfo.adminContacts[0].phone && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <Phone className="w-3 h-3" />
+                        <a
+                          href={`tel:${blockInfo.adminContacts[0].phone}`}
+                          className="hover:underline"
+                        >
+                          {blockInfo.adminContacts[0].phone}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

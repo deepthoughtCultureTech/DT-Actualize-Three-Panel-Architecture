@@ -18,7 +18,7 @@ export default function BlockDurationModal({
   candidateName,
   loading = false,
 }: BlockDurationModalProps) {
-  const [blockDuration, setBlockDuration] = useState(24); // default 24 hours
+  const [blockDuration, setBlockDuration] = useState(24);
   const [customHours, setCustomHours] = useState("");
 
   if (!isOpen) return null;
@@ -26,17 +26,7 @@ export default function BlockDurationModal({
   const handleConfirm = () => {
     const duration =
       blockDuration === 0 ? parseInt(customHours) : blockDuration;
-
-    if (!duration || duration <= 0) {
-      alert("Please enter a valid duration");
-      return;
-    }
-
-    if (duration > 720) {
-      alert("Maximum block duration is 720 hours (30 days)");
-      return;
-    }
-
+    if (!duration || duration <= 0 || duration > 720) return;
     onConfirm(duration);
   };
 
@@ -47,156 +37,132 @@ export default function BlockDurationModal({
   );
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white/95 backdrop-blur-xl rounded-3xl w-full max-w-sm shadow-2xl border border-white/20 max-h-[85vh] overflow-hidden animate-in zoom-in duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold text-gray-900">Block Candidate</h2>
-          </div>
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="text-gray-400 hover:text-gray-600 transition disabled:opacity-50"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="p-6 space-y-4">
-          {/* Candidate Info */}
-          <div className="bg-orange-50 border p-4 border-orange-200 rounded-lg">
-            <div className="flex items-start gap-3">
-              <Ban className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
+        <div className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border-b border-orange-200/50 p-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-orange-500/10 rounded-2xl border border-orange-500/20">
+                <Ban className="w-6 h-6 text-orange-600" />
+              </div>
               <div>
-                <p className="text-sm text-orange-900 font-semibold">
+                <h2 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                  Block Candidate
+                </h2>
+                <p className="text-xs text-orange-700 font-medium">
                   {candidateName}
-                </p>
-                <p className="text-xs text-orange-700 mt-1">
-                  Reason: Missed self-defined timeline
                 </p>
               </div>
             </div>
+            <button
+              onClick={onClose}
+              disabled={loading}
+              className="p-1.5 hover:bg-white/50 rounded-xl transition-all duration-200 hover:scale-105 disabled:opacity-50"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+        </div>
+
+        {/* Duration Selection */}
+        <div className="p-6 space-y-4">
+          <div className="text-xs font-medium text-gray-600 text-center mb-4 tracking-wide">
+            Select block duration
           </div>
 
-          {/* Duration Selection */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
-              Select Block Duration
+          {/* Duration Buttons */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            {[
+              { value: 12, label: "12h" },
+              { value: 24, label: "24h" },
+              { value: 48, label: "48h" },
+            ].map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => setBlockDuration(value)}
+                disabled={loading}
+                className={`group relative p-4 rounded-2xl border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg disabled:opacity-50 ${
+                  blockDuration === value
+                    ? "border-orange-400 bg-gradient-to-br from-orange-50 to-orange-100 shadow-orange-200/50"
+                    : "border-gray-200 hover:border-gray-300 bg-white/50"
+                }`}
+              >
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-orange-400/5 to-red-400/5 -inset-px opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative z-10 text-center">
+                  <div className="text-lg font-bold text-gray-900">{label}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    {value === 24
+                      ? "Recommended"
+                      : value > 24
+                      ? "2 days"
+                      : "Half day"}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Custom Duration */}
+          <div className="bg-gradient-to-r from-gray-50/50 to-white/50 border border-gray-200 rounded-2xl p-4 transition-all hover:shadow-md">
+            <label
+              className="flex items-center gap-3 cursor-pointer w-full" // ✅ Full div clickable
+              onClick={() => setBlockDuration(0)} // ✅ Click anywhere on div
+            >
+              {/* ✅ Radio button aligned with text */}
+              <div
+                className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
+                  blockDuration === 0
+                    ? "bg-orange-500 border-2 border-orange-500"
+                    : "bg-white border-2 border-gray-300 hover:border-gray-400"
+                }`}
+              >
+                {blockDuration === 0 && (
+                  <div className="w-2 h-2 rounded-full bg-white" />
+                )}
+              </div>
+
+              {/* ✅ Text + Input in one line */}
+              <div className="flex-1 min-w-0 flex items-center gap-3">
+                <div className="text-sm font-semibold text-gray-900 flex-shrink-0">
+                  Custom
+                </div>
+                <input
+                  type="number"
+                  value={customHours}
+                  onChange={(e) => setCustomHours(e.target.value)}
+                  placeholder="Enter hours"
+                  min="1"
+                  max="720"
+                  disabled={blockDuration !== 0 || loading}
+                  className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                />
+              </div>
             </label>
-            <div className="space-y-2">
-              {/* 12 Hours */}
-              <label className="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50">
-                <input
-                  type="radio"
-                  name="duration"
-                  value="12"
-                  checked={blockDuration === 12}
-                  onChange={() => setBlockDuration(12)}
-                  className="w-4 h-4 text-orange-600 focus:ring-orange-500"
-                  disabled={loading}
-                />
-                <div className="flex-1">
-                  <span className="text-sm font-medium">12 Hours</span>
-                  <p className="text-xs text-gray-500">Half-day block</p>
-                </div>
-              </label>
-
-              {/* 24 Hours */}
-              <label className="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50">
-                <input
-                  type="radio"
-                  name="duration"
-                  value="24"
-                  checked={blockDuration === 24}
-                  onChange={() => setBlockDuration(24)}
-                  className="w-4 h-4 text-orange-600 focus:ring-orange-500"
-                  disabled={loading}
-                />
-                <div className="flex-1">
-                  <span className="text-sm font-medium">24 Hours</span>
-                  <p className="text-xs text-gray-500">Recommended (1 Day)</p>
-                </div>
-              </label>
-
-              {/* 48 Hours */}
-              <label className="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50">
-                <input
-                  type="radio"
-                  name="duration"
-                  value="48"
-                  checked={blockDuration === 48}
-                  onChange={() => setBlockDuration(48)}
-                  className="w-4 h-4 text-orange-600 focus:ring-orange-500"
-                  disabled={loading}
-                />
-                <div className="flex-1">
-                  <span className="text-sm font-medium">48 Hours</span>
-                  <p className="text-xs text-gray-500">2 Days</p>
-                </div>
-              </label>
-
-              {/* Custom */}
-              <label className="flex items-start gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50">
-                <input
-                  type="radio"
-                  name="duration"
-                  value="0"
-                  checked={blockDuration === 0}
-                  onChange={() => setBlockDuration(0)}
-                  className="w-4 h-4 text-orange-600 focus:ring-orange-500 mt-1"
-                  disabled={loading}
-                />
-                <div className="flex-1">
-                  <span className="text-sm font-medium block mb-2">
-                    Custom Duration
-                  </span>
-                  <input
-                    type="number"
-                    value={customHours}
-                    onChange={(e) => setCustomHours(e.target.value)}
-                    placeholder="Enter hours (1-720)"
-                    min="1"
-                    max="720"
-                    disabled={blockDuration !== 0 || loading}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Maximum: 720 hours (30 days)
-                  </p>
-                </div>
-              </label>
-            </div>
           </div>
 
           {/* Preview */}
           {selectedDuration > 0 && (
-            <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-4 border border-gray-200">
-              <div className="flex items-start gap-2">
-                <Clock className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="bg-gradient-to-r from-blue-500/5 to-indigo-500/5 border border-blue-200/50 rounded-2xl p-4 backdrop-blur-sm">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-blue-500/10 rounded-xl">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                </div>
                 <div className="flex-1">
-                  <p className="text-xs font-semibold text-gray-700 mb-1">
-                    Block Expiry Date
-                  </p>
-                  <p className="text-sm font-mono text-gray-900">
-                    {blockExpiryDate.toLocaleString("en-US", {
-                      weekday: "short",
-                      year: "numeric",
-                      month: "short",
+                  <div className="text-xs font-semibold text-gray-700 mb-1">
+                    Expires
+                  </div>
+                  <div className="text-sm font-mono font-semibold text-gray-900">
+                    {blockExpiryDate.toLocaleString("en-IN", {
                       day: "numeric",
+                      month: "short",
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
-                  </p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    Duration:{" "}
-                    {selectedDuration >= 24
-                      ? `${Math.floor(selectedDuration / 24)} day(s) ${
-                          selectedDuration % 24
-                        }h`
-                      : `${selectedDuration} hour(s)`}
-                  </p>
+                  </div>
+                  <div className="text-xs text-blue-600 mt-1">
+                    {selectedDuration}h total
+                  </div>
                 </div>
               </div>
             </div>
@@ -204,28 +170,28 @@ export default function BlockDurationModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t bg-gray-50 rounded-b-2xl">
+        <div className="flex items-center justify-end gap-3 p-5 border-t bg-gradient-to-r from-gray-50/80 to-white/80 backdrop-blur-sm">
           <button
             onClick={onClose}
             disabled={loading}
-            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition disabled:opacity-50"
+            className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white/50 hover:bg-white border border-gray-200 rounded-xl transition-all hover:shadow-md hover:scale-[1.02] disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleConfirm}
             disabled={loading || selectedDuration <= 0}
-            className="px-6 py-2 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg hover:shadow-xl hover:scale-[1.02] rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {loading ? (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-white/80 border-t-transparent rounded-full animate-spin" />
                 Blocking...
               </>
             ) : (
               <>
                 <Ban className="w-4 h-4" />
-                Block Candidate
+                Block Now
               </>
             )}
           </button>

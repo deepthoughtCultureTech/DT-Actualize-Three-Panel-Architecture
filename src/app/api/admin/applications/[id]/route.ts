@@ -105,7 +105,7 @@ export async function PATCH(req: NextRequest, { params }: any) {
     const db = await connectDB();
     const applicationId = new ObjectId(params.id);
 
-    // ✅ BLOCK CANDIDATE ACTION
+    // ✅ BLOCK CANDIDATE ACTION - FIXED
     if (action === "blockCandidate") {
       const application = await db
         .collection("applications")
@@ -120,7 +120,7 @@ export async function PATCH(req: NextRequest, { params }: any) {
 
       const currentRoundIndex = application.currentRoundIndex;
 
-      // ✅ Clear timeline for current round only
+      // Clear timeline for current round only
       const updatedRounds = application.rounds.map(
         (round: any, index: number) => {
           if (index === currentRoundIndex) {
@@ -139,24 +139,31 @@ export async function PATCH(req: NextRequest, { params }: any) {
         now.getTime() + blockDurationHours * 60 * 60 * 1000
       );
 
-      // Block the candidate account
+      // ✅ FIXED: Block CANDIDATE with isBlocked: true
       await db.collection("candidates").updateOne(
         { _id: application.candidateId },
         {
           $set: {
+            isBlocked: true, // ✅ CRITICAL: Blocks login
             blockedUntil: blockedUntil,
-            blockReason: reason || "Missed self-defined timeline deadline",
+            blockedReason: reason || "Missed self-defined timeline deadline",
+            blockedBy: decoded.id,
+            blockedAt: now,
             updatedAt: now,
           },
         }
       );
 
-      // Update this application with cleared timeline
+      // Update APPLICATION
       await db.collection("applications").updateOne(
         { _id: applicationId },
         {
           $set: {
             status: "blocked",
+            blockedUntil: blockedUntil,
+            blockReason: reason || "Missed self-defined timeline deadline",
+            blockedBy: decoded.id,
+            blockedAt: now,
             rounds: updatedRounds,
             updatedAt: now,
           },
@@ -171,7 +178,7 @@ export async function PATCH(req: NextRequest, { params }: any) {
       });
     }
 
-    // ✅ UNBLOCK CANDIDATE ACTION
+    // ✅ UNBLOCK CANDIDATE ACTION - FIXED
     if (action === "unblockCandidate") {
       const application = await db
         .collection("applications")
@@ -184,25 +191,31 @@ export async function PATCH(req: NextRequest, { params }: any) {
         );
       }
 
-      // Unblock the candidate account
+      // ✅ FIXED: Unblock CANDIDATE
       await db.collection("candidates").updateOne(
         { _id: application.candidateId },
         {
           $set: {
+            isBlocked: false, // ✅ CRITICAL: Allows login
             blockedUntil: null,
-            blockReason: null,
+            blockedReason: null,
+            blockedBy: null,
+            blockedAt: null,
             updatedAt: new Date(),
           },
         }
       );
 
-      // Update application back to in-progress
-      // Timeline remains null - they must set a new one
+      // Update APPLICATION
       await db.collection("applications").updateOne(
         { _id: applicationId },
         {
           $set: {
             status: "in-progress",
+            blockedUntil: null,
+            blockReason: null,
+            blockedBy: null,
+            blockedAt: null,
             updatedAt: new Date(),
           },
         }
