@@ -8,23 +8,39 @@ function uploadBuffer(
   return new Promise((resolve, reject) => {
     console.log("🔍 Starting upload with options:", options);
 
-    // ✅ Force API URL
-    const uploadOptions = {
-      ...options,
-      api_proxy: undefined, // Clear any proxy
-    };
-
     try {
       const stream = cloudinary.uploader.upload_stream(
-        uploadOptions,
+        options,
         (error, result) => {
           if (error) {
-            console.error("❌ Upload callback error:", {
+            // ✅ Cast error to any to access internal properties
+            const err = error as any;
+
+            const errorDetails = {
               message: error.message,
               http_code: error.http_code,
-              // Try to get raw response
-              toString: error.toString(),
-            });
+              name: error.name,
+              error: err.error,
+              response: err.response,
+              body: err.body,
+              text: err.text,
+              html: err.html,
+              full: JSON.stringify(error, null, 2),
+            };
+
+            console.error("❌ Full error object:", errorDetails);
+
+            // Try to parse the message for HTML content
+            if (error.message && error.message.includes("<!DOCTYPE")) {
+              const htmlMatch = error.message.match(/<!DOCTYPE[\s\S]*?>/);
+              if (htmlMatch) {
+                console.error(
+                  "❌ HTML Error Page:",
+                  htmlMatch[0].substring(0, 500)
+                );
+              }
+            }
+
             return reject(error);
           }
 
@@ -38,16 +54,22 @@ function uploadBuffer(
         }
       );
 
-      stream.on("error", (streamError) => {
-        console.error("❌ Stream error event:", streamError);
+      stream.on("error", (streamError: any) => {
+        console.error("❌ Stream error:", {
+          message: streamError.message,
+          stack: streamError.stack,
+        });
         reject(streamError);
       });
 
       console.log("📝 Writing buffer...");
       stream.end(buffer);
       console.log("✅ Buffer written");
-    } catch (syncError) {
-      console.error("❌ Sync error creating stream:", syncError);
+    } catch (syncError: any) {
+      console.error("❌ Sync error:", {
+        message: syncError.message,
+        stack: syncError.stack,
+      });
       reject(syncError);
     }
   });
@@ -61,7 +83,7 @@ export async function uploadFile(
 
   return uploadBuffer(buffer, {
     folder: "myapp/files",
-    resource_type: "raw", // ✅ Use "raw" instead of "auto"
+    resource_type: "raw",
     use_filename: !!filename,
     unique_filename: !filename,
     public_id: filename ? filename.split(".")[0] : undefined,
@@ -81,7 +103,6 @@ export async function uploadAudio(buffer: Buffer): Promise<UploadApiResponse> {
   return uploadBuffer(buffer, {
     folder: "myapp/audio",
     resource_type: "video",
-    format: "mp3",
   });
 }
 
