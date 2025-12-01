@@ -2,12 +2,12 @@
 
 import { useEffect, useState, ChangeEvent, useRef, memo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, UploadIcon } from "lucide-react";
 import { useIsLocked } from "../../Context";
 import { motion } from "framer-motion";
 
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
-import { tiptapExtensions } from "@/components/tiptap/TiptapEditor"; // ✅ Import YOUR extensions
+import { tiptapExtensions } from "@/components/tiptap/TiptapEditor";
 
 // ✅ Field Renderer Component
 const FieldRenderer = memo<{
@@ -19,7 +19,7 @@ const FieldRenderer = memo<{
   const description =
     field.description?.content?.length > 0
       ? renderToReactElement({
-          extensions: tiptapExtensions, // ✅ Use YOUR extensions
+          extensions: tiptapExtensions,
           content: field.description,
         })
       : null;
@@ -44,7 +44,47 @@ const FieldRenderer = memo<{
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) onChange(field._id, file.name);
+    if (!file) return;
+
+    // ✅ File size limit: 10MB
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB in bytes
+
+    if (file.size > MAX_SIZE) {
+      alert("File too large! Maximum size is 10MB.");
+      e.target.value = ""; // Reset input
+      return;
+    }
+
+    // ✅ Allowed file types validation
+    const allowedTypes = [
+      "image/",
+      "audio/",
+      "video/",
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "text/plain",
+      "text/csv",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-powerpoint",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "application/zip",
+      "application/x-rar-compressed",
+    ];
+
+    const isValidType = allowedTypes.some(
+      (type) => file.type.startsWith(type) || file.type === type
+    );
+
+    if (!isValidType) {
+      alert("Invalid file type! Please upload a supported document.");
+      e.target.value = "";
+      return;
+    }
+
+    // ✅ Store filename temporarily (will be uploaded on submit)
+    onChange(field._id, file.name);
   };
 
   return (
@@ -124,13 +164,40 @@ const FieldRenderer = memo<{
       )}
 
       {field.subType === "fileUpload" && (
-        <input
-          type="file"
-          accept="image/*,audio/*"
-          className="cursor-pointer"
-          disabled={isLocked}
-          onChange={handleFileChange}
-        />
+        <div className="relative">
+          <input
+            type="file"
+            accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,.ppt,.pptx,.zip,.rar"
+            id={`file-${field._id}`}
+            className="hidden"
+            disabled={isLocked}
+            onChange={handleFileChange}
+          />
+          <label
+            htmlFor={`file-${field._id}`}
+            className={`
+              flex items-center justify-center gap-2 w-full 
+              px-4 py-3 rounded-lg border-2 border-dashed 
+              text-sm font-medium transition-all cursor-pointer
+              ${
+                isLocked
+                  ? "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
+                  : "border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-400"
+              }
+            `}
+          >
+            <UploadIcon className="w-5 h-5" />
+            {value ? "Change file" : "Choose file"}
+          </label>
+          {value && (
+            <p className="mt-2 text-xs text-center text-gray-600 truncate">
+              📎 {value}
+            </p>
+          )}
+          <p className="mt-1 text-xs text-center text-gray-500">
+            Max size: 10MB • PDF, DOCX, Images, Audio, Video
+          </p>
+        </div>
       )}
     </div>
   );
@@ -143,7 +210,7 @@ const InstructionRenderer = memo<{ instruction: any }>(({ instruction }) => {
   const instructionContent =
     instruction?.content?.length > 0
       ? renderToReactElement({
-          extensions: tiptapExtensions, // ✅ Use YOUR extensions
+          extensions: tiptapExtensions,
           content: instruction,
         })
       : null;
@@ -152,9 +219,7 @@ const InstructionRenderer = memo<{ instruction: any }>(({ instruction }) => {
 
   return (
     <div className="p-6 border rounded-lg bg-blue-50 border-blue-200">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">
-        📋 Instructions
-      </h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-3">Instructions</h3>
       <div className="prose prose-indigo max-w-none">{instructionContent}</div>
     </div>
   );
@@ -223,6 +288,11 @@ export default function RoundSubmissionPage() {
 
   const handleChange = async (fieldId: string, value: string | string[]) => {
     setAnswers((prev) => ({ ...prev, [fieldId]: value }));
+
+    // ✅ Skip autosave for file uploads (files are sent on submit)
+    const field = round?.fields?.find((f: any) => f._id === fieldId);
+    if (field?.subType === "fileUpload") return;
+
     try {
       setSaving(true);
       const token = localStorage.getItem("token");
@@ -261,24 +331,70 @@ export default function RoundSubmissionPage() {
 
     setSubmitting(true);
     try {
-      const payload = {
-        answers: Object.entries(answers).map(([fid, answer]) => ({
-          fieldId: fid,
-          answer,
-        })),
-      };
-      const res = await fetch(
-        `/api/candidate/applications/${id}/round/${roundId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify(payload),
-        }
+      // ✅ Check if there are file fields
+      const hasFiles = round?.fields?.some(
+        (f: any) => f.subType === "fileUpload"
       );
-      if (!res.ok) throw new Error("Submission failed");
+
+      if (hasFiles) {
+        // ✅ Use FormData for file uploads
+        const formData = new FormData();
+
+        const answersPayload = Object.entries(answers).map(([fid, answer]) => ({
+          fieldId: fid,
+          answer: answer,
+        }));
+
+        formData.append("answers", JSON.stringify(answersPayload));
+
+        // ✅ Add files to FormData
+        for (const field of round.fields) {
+          if (field.subType === "fileUpload") {
+            const fileInput = document.getElementById(
+              `file-${field._id}`
+            ) as HTMLInputElement;
+            const file = fileInput?.files?.[0];
+            if (file) {
+              formData.append(`file_${field._id}`, file);
+            }
+          }
+        }
+
+        const res = await fetch(
+          `/api/candidate/applications/${id}/round/${roundId}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+            body: formData, // ✅ Send FormData
+          }
+        );
+
+        if (!res.ok) throw new Error("Submission failed");
+      } else {
+        // ✅ JSON for text-only submissions
+        const payload = {
+          answers: Object.entries(answers).map(([fid, answer]) => ({
+            fieldId: fid,
+            answer,
+          })),
+        };
+
+        const res = await fetch(
+          `/api/candidate/applications/${id}/round/${roundId}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+            body: JSON.stringify(payload),
+          }
+        );
+
+        if (!res.ok) throw new Error("Submission failed");
+      }
 
       const currentIndex = rounds.findIndex((r) => r._id === roundId);
       if (currentIndex !== -1 && currentIndex < rounds.length - 1) {
@@ -419,7 +535,7 @@ export default function RoundSubmissionPage() {
           <button
             onClick={handleSubmit}
             disabled={saving || submitting}
-            className="flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:scale-105 transition disabled:opacity-50"
+            className="flex cursor-pointer items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:scale-105 transition disabled:opacity-50"
           >
             {saving
               ? "Saving..."

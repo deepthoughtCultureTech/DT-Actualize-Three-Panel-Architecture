@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import { Application } from "@/types/application";
 import { ObjectId } from "mongodb";
 import { verifyToken } from "@/utils/auth";
+import { uploadFile, uploadImage, uploadAudio } from "@/lib/uploadService";
 
 export async function POST(req: NextRequest, context: any) {
   try {
@@ -19,8 +20,46 @@ export async function POST(req: NextRequest, context: any) {
 
     const appId = new ObjectId(id);
     const candidateId = new ObjectId(payload.id);
-    const body = await req.json();
-    const { answers } = body;
+
+    // ✅ Handle multipart/form-data for file uploads
+    const contentType = req.headers.get("content-type") || "";
+    let answers: any[] = [];
+
+    if (contentType.includes("multipart/form-data")) {
+      // ✅ Parse FormData
+      const formData = await req.formData();
+      const answersJson = formData.get("answers") as string;
+      answers = JSON.parse(answersJson || "[]");
+
+      // ✅ Process file uploads
+      for (const answer of answers) {
+        const fileKey = `file_${answer.fieldId}`;
+        const file = formData.get(fileKey) as File | null;
+
+        if (file) {
+          // Convert File to Buffer
+          const bytes = await file.arrayBuffer();
+          const buffer = Buffer.from(bytes);
+
+          // ✅ Upload to Cloudinary based on file type
+          let uploadResult;
+          if (file.type.startsWith("image/")) {
+            uploadResult = await uploadImage(buffer);
+          } else if (file.type.startsWith("audio/")) {
+            uploadResult = await uploadAudio(buffer);
+          } else {
+            uploadResult = await uploadFile(buffer, file.name);
+          }
+
+          // ✅ Replace answer with Cloudinary URL
+          answer.answer = uploadResult.secure_url;
+        }
+      }
+    } else {
+      // ✅ JSON body (no files)
+      const body = await req.json();
+      answers = body.answers || [];
+    }
 
     const db = await connectDB();
 
@@ -51,7 +90,7 @@ export async function POST(req: NextRequest, context: any) {
       if (answers && Array.isArray(answers)) {
         updateFields["rounds.$.answers"] = answers.map((a: any) => ({
           fieldId: new ObjectId(a.fieldId),
-          answer: a.answer,
+          answer: a.answer, // ✅ Now contains Cloudinary URL
         }));
       }
 
@@ -71,7 +110,7 @@ export async function POST(req: NextRequest, context: any) {
         answers:
           answers?.map((a: any) => ({
             fieldId: new ObjectId(a.fieldId),
-            answer: a.answer,
+            answer: a.answer, // ✅ Now contains Cloudinary URL
           })) || [],
       };
 
@@ -177,6 +216,7 @@ export async function POST(req: NextRequest, context: any) {
     );
   }
 }
+
 /**
  * Autosave round (keep answers, but not submit)
  */
