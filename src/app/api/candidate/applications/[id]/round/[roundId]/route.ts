@@ -26,78 +26,34 @@ export async function POST(req: NextRequest, context: any) {
     let answers: any[] = [];
 
     if (contentType.includes("multipart/form-data")) {
-      console.log("📤 Processing multipart upload");
+      // ✅ Parse FormData
+      const formData = await req.formData();
+      const answersJson = formData.get("answers") as string;
+      answers = JSON.parse(answersJson || "[]");
 
-      try {
-        const formData = await req.formData();
-        console.log("✅ FormData parsed");
+      // ✅ Process file uploads
+      for (const answer of answers) {
+        const fileKey = `file_${answer.fieldId}`;
+        const file = formData.get(fileKey) as File | null;
 
-        const answersJson = formData.get("answers") as string;
-        answers = JSON.parse(answersJson || "[]");
-        console.log("✅ Answers parsed:", answers.length);
+        if (file) {
+          // Convert File to Buffer
+          const bytes = await file.arrayBuffer();
+          const buffer = Buffer.from(bytes);
 
-        for (const answer of answers) {
-          const fileKey = `file_${answer.fieldId}`;
-          const file = formData.get(fileKey) as File | null;
-
-          if (file) {
-            console.log(`📁 Processing file:`, {
-              name: file.name,
-              size: file.size,
-              type: file.type,
-              fieldId: answer.fieldId,
-            });
-
-            try {
-              console.log("🔄 Converting to buffer...");
-              const bytes = await file.arrayBuffer();
-              const buffer = Buffer.from(bytes);
-              console.log(`✅ Buffer created: ${buffer.length} bytes`);
-
-              console.log("📤 Calling upload function...");
-              let uploadResult;
-
-              if (file.type.startsWith("image/")) {
-                console.log("📸 Uploading as IMAGE");
-                uploadResult = await uploadImage(buffer);
-              } else if (file.type.startsWith("audio/")) {
-                console.log("🎵 Uploading as AUDIO");
-                uploadResult = await uploadAudio(buffer);
-              } else {
-                console.log("📄 Uploading as FILE");
-                uploadResult = await uploadFile(buffer, file.name);
-              }
-
-              console.log("✅✅✅ UPLOAD SUCCESS:", uploadResult.secure_url);
-              answer.answer = uploadResult.secure_url;
-            } catch (uploadError: any) {
-              console.error("❌❌❌ UPLOAD ERROR:", {
-                message: uploadError.message,
-                name: uploadError.name,
-                http_code: uploadError.http_code,
-                error: uploadError.error,
-                stack: uploadError.stack?.substring(0, 500),
-              });
-
-              return NextResponse.json(
-                {
-                  error: "Cloudinary upload failed",
-                  message: uploadError.message,
-                  file: file.name,
-                },
-                { status: 500 }
-              );
-            }
+          // ✅ Upload to Cloudinary based on file type
+          let uploadResult;
+          if (file.type.startsWith("image/")) {
+            uploadResult = await uploadImage(buffer);
+          } else if (file.type.startsWith("audio/")) {
+            uploadResult = await uploadAudio(buffer);
+          } else {
+            uploadResult = await uploadFile(buffer, file.name);
           }
-        }
 
-        console.log("✅ All files processed successfully");
-      } catch (formError: any) {
-        console.error("❌ FormData processing error:", formError);
-        return NextResponse.json(
-          { error: "FormData processing failed", details: formError.message },
-          { status: 400 }
-        );
+          // ✅ Replace answer with Cloudinary URL
+          answer.answer = uploadResult.secure_url;
+        }
       }
     } else {
       // ✅ JSON body (no files)
@@ -134,7 +90,7 @@ export async function POST(req: NextRequest, context: any) {
       if (answers && Array.isArray(answers)) {
         updateFields["rounds.$.answers"] = answers.map((a: any) => ({
           fieldId: new ObjectId(a.fieldId),
-          answer: a.answer,
+          answer: a.answer, // ✅ Now contains Cloudinary URL
         }));
       }
 
@@ -154,7 +110,7 @@ export async function POST(req: NextRequest, context: any) {
         answers:
           answers?.map((a: any) => ({
             fieldId: new ObjectId(a.fieldId),
-            answer: a.answer,
+            answer: a.answer, // ✅ Now contains Cloudinary URL
           })) || [],
       };
 
@@ -252,10 +208,10 @@ export async function POST(req: NextRequest, context: any) {
 
     // Fallback if next round not found
     return NextResponse.json({ success: true, nextRoundIndex: null });
-  } catch (err: any) {
-    console.error("❌ Submit round error:", err);
+  } catch (err) {
+    console.error("Submit round error:", err);
     return NextResponse.json(
-      { error: "Failed to submit round", details: err.message },
+      { error: "Failed to submit round" },
       { status: 500 }
     );
   }
