@@ -67,3 +67,24 @@ export async function uploadFile(
     public_id: filename ? filename.split(".")[0] : undefined,
   });
 }
+
+export async function uploadImage(buffer: Buffer): Promise<UploadApiResponse> {
+  console.log("📸 uploadImage called");
+  return uploadBuffer(buffer, {
+    folder: "myapp/images",
+    resource_type: "image",
+  });
+}
+
+export async function uploadAudio(buffer: Buffer): Promise<UploadApiResponse> {
+  console.log("🎵 uploadAudio called");
+  return uploadBuffer(buffer, {
+    folder: "myapp/audio",
+    resource_type: "video",
+    format: "mp3",
+  });
+}
+
+export async function deleteFile(publicId: string): Promise<UploadApiResponse> {
+  return cloudinary.uploader.destroy(publicId);
+}
