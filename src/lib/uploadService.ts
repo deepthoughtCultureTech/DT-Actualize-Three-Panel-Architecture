@@ -6,47 +6,50 @@ function uploadBuffer(
   options: Record<string, any>
 ): Promise<UploadApiResponse> {
   return new Promise((resolve, reject) => {
-    // ✅ Log Cloudinary version and config
-    console.log("🔍 Cloudinary SDK version:", (cloudinary as any).version);
-    console.log("🔍 Config loaded:", {
-      cloud_name: cloudinary.config().cloud_name,
-      api_key: cloudinary.config().api_key,
-      secure: cloudinary.config().secure,
-    });
+    console.log("🔍 Starting upload with options:", options);
 
-    const stream = cloudinary.uploader.upload_stream(
-      options,
-      (error, result) => {
-        if (error) {
-          // ✅ Log FULL error object
-          console.error("❌ Cloudinary stream error (full):", {
-            message: error.message,
-            name: error.name,
-            http_code: error.http_code,
-            error: error.error,
+    // ✅ Force API URL
+    const uploadOptions = {
+      ...options,
+      api_proxy: undefined, // Clear any proxy
+    };
 
-            response: error.response,
+    try {
+      const stream = cloudinary.uploader.upload_stream(
+        uploadOptions,
+        (error, result) => {
+          if (error) {
+            console.error("❌ Upload callback error:", {
+              message: error.message,
+              http_code: error.http_code,
+              // Try to get raw response
+              toString: error.toString(),
+            });
+            return reject(error);
+          }
 
-            body: error.body,
-          });
-          return reject(error);
+          if (!result) {
+            console.error("❌ No result returned");
+            return reject(new Error("No result from Cloudinary"));
+          }
+
+          console.log("✅ Upload success:", result.secure_url);
+          resolve(result as UploadApiResponse);
         }
+      );
 
-        console.log("✅ Stream success");
-        resolve(result as UploadApiResponse);
-      }
-    );
+      stream.on("error", (streamError) => {
+        console.error("❌ Stream error event:", streamError);
+        reject(streamError);
+      });
 
-    // ✅ Catch stream errors
-    stream.on("error", (streamError) => {
-      console.error("❌ Stream event error:", streamError);
-      reject(streamError);
-    });
-
-    // ✅ Log when buffer is written
-    console.log("📝 Writing buffer to stream...");
-    stream.end(buffer);
-    console.log("✅ Buffer written to stream");
+      console.log("📝 Writing buffer...");
+      stream.end(buffer);
+      console.log("✅ Buffer written");
+    } catch (syncError) {
+      console.error("❌ Sync error creating stream:", syncError);
+      reject(syncError);
+    }
   });
 }
 
@@ -56,40 +59,11 @@ export async function uploadFile(
 ): Promise<UploadApiResponse> {
   console.log("📤 uploadFile called");
 
-  try {
-    const result = await uploadBuffer(buffer, {
-      folder: "myapp/files",
-      resource_type: "raw",
-      use_filename: !!filename,
-      unique_filename: !filename,
-      access_mode: "public",
-    });
-
-    console.log("✅ uploadFile complete");
-    return result;
-  } catch (error: any) {
-    console.error("❌ uploadFile error:", error);
-    throw error;
-  }
-}
-
-export async function uploadImage(buffer: Buffer): Promise<UploadApiResponse> {
-  console.log("📸 uploadImage called");
   return uploadBuffer(buffer, {
-    folder: "myapp/images",
-    resource_type: "image",
+    folder: "myapp/files",
+    resource_type: "raw", // ✅ Use "raw" instead of "auto"
+    use_filename: !!filename,
+    unique_filename: !filename,
+    public_id: filename ? filename.split(".")[0] : undefined,
   });
-}
-
-export async function uploadAudio(buffer: Buffer): Promise<UploadApiResponse> {
-  console.log("🎵 uploadAudio called");
-  return uploadBuffer(buffer, {
-    folder: "myapp/audio",
-    resource_type: "video",
-    format: "mp3",
-  });
-}
-
-export async function deleteFile(publicId: string): Promise<UploadApiResponse> {
-  return cloudinary.uploader.destroy(publicId);
 }
