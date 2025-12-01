@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, RefreshCw, Mail, User, Phone } from "lucide-react";
+import {
+  AlertCircle,
+  RefreshCw,
+  Mail,
+  User,
+  Phone,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 
 export default function CandidateAuthPage() {
   const router = useRouter();
@@ -13,6 +21,7 @@ export default function CandidateAuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [blockInfo, setBlockInfo] = useState<any>(null);
+  const [show, setShow] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,19 +228,30 @@ export default function CandidateAuthPage() {
             />
           </div>
 
-          <div>
+          <div className="relative">
             <label className="mb-1 block text-sm font-semibold text-gray-700">
               Password
             </label>
             <input
-              type="password"
+              type={show ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition pr-10"
               placeholder="••••••••"
               required
               disabled={!!blockInfo}
             />
+            <button
+              type="button"
+              className="absolute cursor-pointer inset-y-0 right-0 top-9 px-3 flex items-center text-gray-400"
+              tabIndex={-1}
+              onClick={() => setShow((v) => !v)}
+              aria-label={show ? "Hide Password" : "Show Password"}
+              style={{ background: "none", border: "none" }}
+              disabled={!!blockInfo}
+            >
+              {show ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
 
           <button
