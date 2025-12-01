@@ -24,9 +24,9 @@ function uploadBuffer(
             name: error.name,
             http_code: error.http_code,
             error: error.error,
-            // @ts-ignore
+
             response: error.response,
-            // @ts-ignore
+
             body: error.body,
           });
           return reject(error);
