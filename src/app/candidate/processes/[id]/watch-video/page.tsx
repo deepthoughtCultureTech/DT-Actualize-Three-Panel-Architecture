@@ -125,13 +125,6 @@ export default function WatchVideoPage() {
                 controls
                 controlsList={watchBeforeBegin.mandatory ? "nodownload nofullscreen" : undefined}
                 onEnded={handleVideoEnd}
-                onTimeUpdate={(e) => {
-                  const video = e.currentTarget;
-                  // Check if video is near the end (within last 2 seconds)
-                  if (video.duration - video.currentTime < 2) {
-                    setVideoCompleted(true);
-                  }
-                }}
                 className="w-full"
               >
                 Your browser does not support the video element.

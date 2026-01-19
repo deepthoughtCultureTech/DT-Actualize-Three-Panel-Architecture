@@ -33,11 +33,13 @@ export default function CreateFieldPage() {
   }, []);
 
   // Auto-populate question when audioResponse is selected
+  // Note: We intentionally don't include 'question' in dependencies to avoid infinite loop
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (type === "audioResponse" && !question) {
+    if (type === "audioResponse" && question.trim() === "") {
       setQuestion("Please record your audio response and submit.");
     }
-  }, [type, question]);
+  }, [type]); // Only depend on type change
 
   const questionError =
     !question.trim()

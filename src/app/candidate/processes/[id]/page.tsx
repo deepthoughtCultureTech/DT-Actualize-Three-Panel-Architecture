@@ -179,7 +179,7 @@ const RecruitmentScreen = () => {
     const watchedKey = `watched_video_${id}`;
     const hasWatched = localStorage.getItem(watchedKey);
     
-    if (!hasWatched && (process as any)?.watchBeforeBegin) {
+    if (!hasWatched && process?.watchBeforeBegin) {
       router.push(`/candidate/processes/${id}/watch-video`);
       return;
     }

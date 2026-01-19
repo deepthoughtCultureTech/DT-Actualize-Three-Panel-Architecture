@@ -93,8 +93,11 @@ export default function AudioRecorder({
 
   const handleUpload = async () => {
     if (audioBlob) {
-      const randomId = Math.random().toString(36).substring(2, 15);
-      const file = new File([audioBlob], `audio-${fieldId}-${Date.now()}-${randomId}.webm`, {
+      // Generate a unique ID using crypto API if available, fallback to random string
+      const uniqueId = typeof crypto !== 'undefined' && crypto.randomUUID 
+        ? crypto.randomUUID().substring(0, 8)
+        : Math.random().toString(36).substring(2, 15);
+      const file = new File([audioBlob], `audio-${fieldId}-${Date.now()}-${uniqueId}.webm`, {
         type: "audio/webm",
       });
       await onFileUpload(fieldId, file);
