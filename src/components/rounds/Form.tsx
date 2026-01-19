@@ -1,10 +1,11 @@
 import { motion } from "framer-motion";
 import { memo, useCallback, useState, useEffect } from "react";
+import AudioRecorder from "./AudioRecorder";
 
 interface Field {
   _id: string;
   question: string;
-  subType: "shortText" | "fileUpload" | "number";
+  subType: "shortText" | "fileUpload" | "number" | "audioResponse";
 }
 
 interface FormRoundProps {
@@ -94,7 +95,15 @@ const FieldInput = memo(
           {field.question} <span className="text-red-500 ml-1">*</span>
         </label>
 
-        {field.subType === "fileUpload" ? (
+        {field.subType === "audioResponse" ? (
+          <AudioRecorder
+            fieldId={field._id}
+            value={parentValue}
+            isLocked={isLocked}
+            onChange={onChange}
+            onFileUpload={onFileUpload}
+          />
+        ) : field.subType === "fileUpload" ? (
           parentValue ? (
             <div
               className={`flex items-center justify-between border p-3 rounded-lg ${

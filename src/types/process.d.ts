@@ -1,7 +1,7 @@
 export interface Field {
   _id: string;
   question: string;
-  subType: "shortText" | "longText" | "codeEditor"; // you can extend
+  subType: "shortText" | "longText" | "codeEditor" | "audioResponse"; // you can extend
 }
 
 export interface Round {

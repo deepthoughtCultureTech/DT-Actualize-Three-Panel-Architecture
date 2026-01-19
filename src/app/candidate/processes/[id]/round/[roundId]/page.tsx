@@ -12,7 +12,7 @@ import Instructions from "@/components/rounds/Instructions";
 interface Field {
   _id: string;
   question: string;
-  subType: "shortText" | "fileUpload" | "number";
+  subType: "shortText" | "fileUpload" | "number" | "audioResponse";
 }
 
 interface Upload {
