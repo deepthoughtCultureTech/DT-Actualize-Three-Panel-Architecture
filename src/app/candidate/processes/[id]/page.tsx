@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Code } from "lucide-react";
+import { WatchBeforeYouBeginModal } from "@/components/candidate/WatchBeforeYouBeginModal";
+import { WatchBeforeYouBegin } from "@/types/process";
 
 interface Round {
   _id: string;
@@ -19,6 +21,7 @@ interface Process {
   description: string;
   rounds: Round[];
   createdAt: string;
+  watchBeforeYouBegin?: WatchBeforeYouBegin;
 }
 
 interface RoundProgress {
@@ -46,6 +49,8 @@ const RecruitmentScreen = () => {
   const [application, setApplication] = useState<ApplicationWithProcess | null>(null);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [videoWatched, setVideoWatched] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -58,6 +63,13 @@ const RecruitmentScreen = () => {
         if (!res.ok) throw new Error("Failed to fetch process");
         const data = await res.json();
         setProcess(data);
+
+        // Check if user has already watched the video
+        if (data.watchBeforeYouBegin?.enabled) {
+          const watchedKey = `watched-${id}`;
+          const hasWatched = localStorage.getItem(watchedKey);
+          setVideoWatched(hasWatched === "true");
+        }
 
         const appRes = await fetch(`/api/candidate/applications`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -159,6 +171,26 @@ const RecruitmentScreen = () => {
   // };
 
   const handleContinue = () => {
+    // Check if video needs to be watched first
+    if (process?.watchBeforeYouBegin?.enabled && !videoWatched) {
+      setShowVideoModal(true);
+      return;
+    }
+
+    if (!process || !application) return;
+    if (application.currentRoundIndex !== null) {
+      const round = process.rounds.sort((a, b) => a.order - b.order)[application.currentRoundIndex];
+      if (round) {
+        router.push(`/candidate/processes/${id}/round/${round._id}`);
+      }
+    }
+  };
+
+  const handleVideoComplete = () => {
+    setShowVideoModal(false);
+    setVideoWatched(true);
+    
+    // After video is watched, proceed with the original action
     if (!process || !application) return;
     if (application.currentRoundIndex !== null) {
       const round = process.rounds.sort((a, b) => a.order - b.order)[application.currentRoundIndex];
@@ -186,10 +218,19 @@ const RecruitmentScreen = () => {
     );
   }
 
-
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="container mx-auto px-6 py-12 max-w-4xl">
+    <>
+      {/* Watch Before You Begin Modal */}
+      {showVideoModal && process.watchBeforeYouBegin && (
+        <WatchBeforeYouBeginModal
+          videoConfig={process.watchBeforeYouBegin}
+          onComplete={handleVideoComplete}
+          processId={id}
+        />
+      )}
+
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="container mx-auto px-6 py-12 max-w-4xl">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -292,8 +333,9 @@ const RecruitmentScreen = () => {
             </Button>
           </motion.div>
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
