@@ -19,6 +19,12 @@ interface Process {
   description: string;
   rounds: Round[];
   createdAt: string;
+  watchBeforeBegin?: {
+    videoUrl: string;
+    title: string;
+    description: string;
+    mandatory: boolean;
+  };
 }
 
 interface RoundProgress {
