@@ -169,7 +169,7 @@ export default function WatchVideoPage() {
               className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-3 text-sm font-medium text-white shadow-md hover:scale-105 transition disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
             >
               <Play className="h-4 w-4" />
-              {videoCompleted ? "Start Process" : "Start Process"}
+              Start Process
             </button>
           </div>
 

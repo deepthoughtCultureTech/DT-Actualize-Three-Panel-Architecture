@@ -43,6 +43,8 @@ export default function AudioRecorder({
     };
   }, []);
 
+  const [errorMsg, setErrorMsg] = useState<string>("");
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -67,13 +69,14 @@ export default function AudioRecorder({
       mediaRecorder.start();
       setIsRecording(true);
       setRecordingTime(0);
+      setErrorMsg("");
 
       timerRef.current = setInterval(() => {
         setRecordingTime((prev) => prev + 1);
       }, 1000);
     } catch (error) {
       console.error("Error accessing microphone:", error);
-      alert("Could not access microphone. Please check permissions.");
+      setErrorMsg("Could not access microphone. Please check permissions.");
     }
   };
 
@@ -90,7 +93,8 @@ export default function AudioRecorder({
 
   const handleUpload = async () => {
     if (audioBlob) {
-      const file = new File([audioBlob], `audio-${fieldId}-${Date.now()}.webm`, {
+      const randomId = Math.random().toString(36).substring(2, 15);
+      const file = new File([audioBlob], `audio-${fieldId}-${Date.now()}-${randomId}.webm`, {
         type: "audio/webm",
       });
       await onFileUpload(fieldId, file);
@@ -123,6 +127,12 @@ export default function AudioRecorder({
 
   return (
     <div className="space-y-4">
+      {errorMsg && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {errorMsg}
+        </div>
+      )}
+
       {!value && !audioUrl && !isRecording && (
         <button
           type="button"
