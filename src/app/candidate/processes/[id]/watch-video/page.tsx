@@ -27,7 +27,6 @@ export default function WatchVideoPage() {
   const [process, setProcess] = useState<Process | null>(null);
   const [loading, setLoading] = useState(true);
   const [videoCompleted, setVideoCompleted] = useState(false);
-  const [videoStarted, setVideoStarted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -125,7 +124,6 @@ export default function WatchVideoPage() {
                 src={watchBeforeBegin.videoUrl}
                 controls
                 controlsList={watchBeforeBegin.mandatory ? "nodownload nofullscreen" : undefined}
-                onPlay={() => setVideoStarted(true)}
                 onEnded={handleVideoEnd}
                 onTimeUpdate={(e) => {
                   const video = e.currentTarget;

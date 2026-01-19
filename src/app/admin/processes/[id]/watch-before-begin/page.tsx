@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Upload, X, Video } from "lucide-react";
+import { motion } from "framer-motion";
+import { X, Video } from "lucide-react";
 
 interface WatchBeforeBeginConfig {
   videoUrl: string;
