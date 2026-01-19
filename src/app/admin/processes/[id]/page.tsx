@@ -185,6 +185,15 @@ export default function ProcessDetailsPage() {
           </div>
           {!isPublished && <div className="flex flex-wrap gap-2">
             <button
+              onClick={() => router.push(`/admin/processes/${id}/watch-before-begin`)}
+              className="cursor-pointer inline-flex items-center gap-2 rounded-lg bg-purple-600 px-3 py-2 text-sm font-medium text-white hover:bg-purple-700"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              Watch Before Begin
+            </button>
+            <button
               onClick={() => router.push(`/admin/processes/${id}/publish`)}
               className="cursor-pointer inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >

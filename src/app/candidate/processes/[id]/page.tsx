@@ -19,6 +19,12 @@ interface Process {
   description: string;
   rounds: Round[];
   createdAt: string;
+  watchBeforeBegin?: {
+    videoUrl: string;
+    title: string;
+    description: string;
+    mandatory: boolean;
+  };
 }
 
 interface RoundProgress {
@@ -115,10 +121,18 @@ const RecruitmentScreen = () => {
         if (app) {
           setApplication(app);
 
-          // 🔹 Redirect always, regardless of status
-          const firstRound = process?.rounds.sort((a, b) => a.order - b.order)[0];
-          if (firstRound) {
-            router.push(`/candidate/processes/${id}/round/${firstRound._id}`);
+          // 🔹 Check if video needs to be watched first
+          const watchedKey = `watched_video_${id}`;
+          const hasWatched = localStorage.getItem(watchedKey);
+          
+          if (!hasWatched && process?.watchBeforeBegin) {
+            router.push(`/candidate/processes/${id}/watch-video`);
+          } else {
+            // Redirect to first round
+            const firstRound = process?.rounds.sort((a, b) => a.order - b.order)[0];
+            if (firstRound) {
+              router.push(`/candidate/processes/${id}/round/${firstRound._id}`);
+            }
           }
         }
       }
@@ -160,6 +174,16 @@ const RecruitmentScreen = () => {
 
   const handleContinue = () => {
     if (!process || !application) return;
+    
+    // Check if video needs to be watched first
+    const watchedKey = `watched_video_${id}`;
+    const hasWatched = localStorage.getItem(watchedKey);
+    
+    if (!hasWatched && process?.watchBeforeBegin) {
+      router.push(`/candidate/processes/${id}/watch-video`);
+      return;
+    }
+    
     if (application.currentRoundIndex !== null) {
       const round = process.rounds.sort((a, b) => a.order - b.order)[application.currentRoundIndex];
       if (round) {

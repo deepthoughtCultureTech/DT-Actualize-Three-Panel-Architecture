@@ -58,6 +58,7 @@ export async function PATCH(req: NextRequest, { params }: any) {
     if (updates.description) allowedUpdates.description = updates.description;
     if (updates.rounds) allowedUpdates.rounds = updates.rounds; // <-- update rounds
     if (updates.status) allowedUpdates.status = updates.status;
+    if (updates.watchBeforeBegin !== undefined) allowedUpdates.watchBeforeBegin = updates.watchBeforeBegin;
 
     allowedUpdates.updatedAt = new Date();
 

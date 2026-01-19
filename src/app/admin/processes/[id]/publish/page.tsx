@@ -84,12 +84,20 @@ export default function PublishProcessPage() {
       )
       : true;
     const roundsHaveTitles = rounds.every((r) => r.title && r.title.trim().length >= 2);
+    
+    // Only check video if it's marked as mandatory
+    const watchBeforeBegin = (process as any)?.watchBeforeBegin;
+    const hasWatchBeforeBeginVideo = watchBeforeBegin?.mandatory 
+      ? Boolean(watchBeforeBegin?.videoUrl && watchBeforeBegin?.title)
+      : true; // If not mandatory, pass the check
 
     return {
       hasTitle,
       hasAtLeastOneRound,
       orderedAscending,
       roundsHaveTitles,
+      hasWatchBeforeBeginVideo,
+      watchBeforeBeginMandatory: watchBeforeBegin?.mandatory || false,
     };
   }, [process]);
 
@@ -97,7 +105,8 @@ export default function PublishProcessPage() {
     checks.hasTitle &&
     checks.hasAtLeastOneRound &&
     checks.orderedAscending &&
-    checks.roundsHaveTitles;
+    checks.roundsHaveTitles &&
+    checks.hasWatchBeforeBeginVideo;
 
   // Publish action
   async function handlePublish() {
@@ -239,6 +248,27 @@ export default function PublishProcessPage() {
                 <div className="font-medium text-slate-900">Each round named</div>
                 {!checks.roundsHaveTitles && (
                   <div className="text-slate-600">Give all rounds a meaningful title.</div>
+                )}
+              </div>
+            </li>
+
+            <li className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
+              {checks.hasWatchBeforeBeginVideo ? (
+                <IconCheck className="mt-0.5 h-4 w-4 text-emerald-600" />
+              ) : (
+                <IconX className="mt-0.5 h-4 w-4 text-rose-600" />
+              )}
+              <div className="text-sm">
+                <div className="font-medium text-slate-900">
+                  Watch Before Begin video {checks.watchBeforeBeginMandatory ? "(Mandatory)" : "(Optional)"}
+                </div>
+                {!checks.hasWatchBeforeBeginVideo && checks.watchBeforeBeginMandatory && (
+                  <div className="text-slate-600">
+                    A mandatory &apos;Watch Before You Begin&apos; video must be configured.
+                  </div>
+                )}
+                {checks.hasWatchBeforeBeginVideo && (
+                  <div className="text-slate-600">Video is configured and ready.</div>
                 )}
               </div>
             </li>

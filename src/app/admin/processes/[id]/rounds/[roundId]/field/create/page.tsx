@@ -12,7 +12,8 @@ type SubType =
   | "longText"
   | "singleChoice"
   | "multipleChoice"
-  | "codeEditor";
+  | "codeEditor"
+  | "audioResponse";
 
 export default function CreateFieldPage() {
   const params = useParams<{ id: string; roundId: string }>();
@@ -30,6 +31,15 @@ export default function CreateFieldPage() {
   useEffect(() => {
     setToken(localStorage.getItem("token"));
   }, []);
+
+  // Auto-populate question when audioResponse is selected
+  // Note: We intentionally don't include 'question' in dependencies to avoid infinite loop
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (type === "audioResponse" && question.trim() === "") {
+      setQuestion("Please record your audio response and submit.");
+    }
+  }, [type]); // Only depend on type change
 
   const questionError =
     !question.trim()
@@ -134,6 +144,7 @@ export default function CreateFieldPage() {
             >
               <option value="shortText">Short Text</option>
               <option value="fileUpload">File Upload</option>
+              <option value="audioResponse">Audio Response</option>
               {/* <option value="longText">Long Text</option>
               <option value="singleChoice">Single Choice</option>
               <option value="multipleChoice">Multiple Choice</option>
