@@ -22,6 +22,7 @@ export default function AudioRecorder({
   const [audioURL, setAudioURL] = useState<string | null>(value || null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -36,6 +37,7 @@ export default function AudioRecorder({
 
   const startRecording = async () => {
     try {
+      setError(null);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
@@ -67,7 +69,7 @@ export default function AudioRecorder({
       }, 1000);
     } catch (error) {
       console.error("Error accessing microphone:", error);
-      alert("Unable to access microphone. Please check your permissions.");
+      setError("Unable to access microphone. Please check your permissions.");
     }
   };
 
@@ -155,6 +157,12 @@ export default function AudioRecorder({
 
   return (
     <div className="space-y-3">
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+      
       {!isRecording ? (
         <button
           type="button"

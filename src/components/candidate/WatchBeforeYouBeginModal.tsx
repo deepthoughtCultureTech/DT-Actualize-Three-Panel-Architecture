@@ -26,6 +26,17 @@ export function WatchBeforeYouBeginModal({
   // For mandatory videos, require watching for at least 90% of duration
   const REQUIRED_WATCH_PERCENTAGE = 0.9;
 
+  // Helper function to parse video duration safely
+  const parseVideoDuration = (duration: string | undefined): number | null => {
+    if (!duration) return null;
+    const parts = duration.split(":");
+    if (parts.length !== 2) return null;
+    const mins = parseInt(parts[0], 10);
+    const secs = parseInt(parts[1], 10);
+    if (isNaN(mins) || isNaN(secs)) return null;
+    return mins * 60 + secs;
+  };
+
   useEffect(() => {
     // Check if user has already watched this video
     const watchedKey = `watched-${processId}`;
@@ -42,9 +53,8 @@ export function WatchBeforeYouBeginModal({
         setTimeWatched((prev) => {
           const newTime = prev + 1;
           // If video duration is provided, calculate required watch time
-          if (videoConfig.videoDuration) {
-            const [mins, secs] = videoConfig.videoDuration.split(":").map(Number);
-            const totalSeconds = mins * 60 + secs;
+          const totalSeconds = parseVideoDuration(videoConfig.videoDuration);
+          if (totalSeconds) {
             const requiredTime = totalSeconds * REQUIRED_WATCH_PERCENTAGE;
             
             if (newTime >= requiredTime) {
@@ -195,12 +205,12 @@ export function WatchBeforeYouBeginModal({
                     className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
                     initial={{ width: 0 }}
                     animate={{
-                      width: videoConfig.videoDuration
-                        ? `${(timeWatched / ((() => {
-                            const [mins, secs] = videoConfig.videoDuration!.split(":").map(Number);
-                            return (mins * 60 + secs) * REQUIRED_WATCH_PERCENTAGE;
-                          })() || 1)) * 100}%`
-                        : "0%",
+                      width: (() => {
+                        const totalSeconds = parseVideoDuration(videoConfig.videoDuration);
+                        if (!totalSeconds) return "0%";
+                        const requiredTime = totalSeconds * REQUIRED_WATCH_PERCENTAGE;
+                        return `${Math.min((timeWatched / requiredTime) * 100, 100)}%`;
+                      })(),
                     }}
                     transition={{ duration: 0.3 }}
                   />
