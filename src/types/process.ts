@@ -75,4 +75,10 @@ export interface Process {
   submissions?: Submission[];
   createdAt: Date;
   status: "draft" | "published"; // ✅ add this
+  watchBeforeBegin?: {
+    videoUrl: string;
+    title: string;
+    description: string;
+    mandatory: boolean;
+  };
 }

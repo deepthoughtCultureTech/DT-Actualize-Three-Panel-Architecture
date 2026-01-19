@@ -84,12 +84,17 @@ export default function PublishProcessPage() {
       )
       : true;
     const roundsHaveTitles = rounds.every((r) => r.title && r.title.trim().length >= 2);
+    const hasWatchBeforeBeginVideo = Boolean(
+      (process as any)?.watchBeforeBegin?.videoUrl &&
+      (process as any)?.watchBeforeBegin?.title
+    );
 
     return {
       hasTitle,
       hasAtLeastOneRound,
       orderedAscending,
       roundsHaveTitles,
+      hasWatchBeforeBeginVideo,
     };
   }, [process]);
 
@@ -97,7 +102,8 @@ export default function PublishProcessPage() {
     checks.hasTitle &&
     checks.hasAtLeastOneRound &&
     checks.orderedAscending &&
-    checks.roundsHaveTitles;
+    checks.roundsHaveTitles &&
+    checks.hasWatchBeforeBeginVideo;
 
   // Publish action
   async function handlePublish() {
@@ -239,6 +245,20 @@ export default function PublishProcessPage() {
                 <div className="font-medium text-slate-900">Each round named</div>
                 {!checks.roundsHaveTitles && (
                   <div className="text-slate-600">Give all rounds a meaningful title.</div>
+                )}
+              </div>
+            </li>
+
+            <li className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
+              {checks.hasWatchBeforeBeginVideo ? (
+                <IconCheck className="mt-0.5 h-4 w-4 text-emerald-600" />
+              ) : (
+                <IconX className="mt-0.5 h-4 w-4 text-rose-600" />
+              )}
+              <div className="text-sm">
+                <div className="font-medium text-slate-900">Watch Before Begin video configured</div>
+                {!checks.hasWatchBeforeBeginVideo && (
+                  <div className="text-slate-600">Please add a &apos;Watch Before You Begin&apos; video before publishing.</div>
                 )}
               </div>
             </li>
