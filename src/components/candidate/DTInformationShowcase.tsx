@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, MapPin, Briefcase, ArrowRight, Play, ExternalLink } from "lucide-react";
+import { Search, MapPin, ArrowRight, Play, ExternalLink } from "lucide-react";
 
 interface DTShowcaseProps {
   onContinue?: () => void;
@@ -22,43 +22,42 @@ export default function DTInformationShowcase({ onContinue }: DTShowcaseProps) {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Mock opportunities data - in production, this would come from an API
-  const mockOpportunities: Opportunity[] = [
-    {
-      id: "1",
-      title: "Software Engineer",
-      location: "Bangalore, India",
-      description: "Join our engineering team to build scalable solutions",
-      tags: ["Remote", "Full-time"],
-      type: "Engineering",
-    },
-    {
-      id: "2",
-      title: "Product Manager",
-      location: "Mumbai, India",
-      description: "Lead product strategy and development",
-      tags: ["Hybrid", "Full-time"],
-      type: "Product",
-    },
-    {
-      id: "3",
-      title: "Data Scientist Intern",
-      location: "Delhi, India",
-      description: "Work on AI/ML projects with our data team",
-      tags: ["On-site", "Internship"],
-      type: "Data Science",
-    },
-  ];
-
   useEffect(() => {
     // Load opportunities based on location filter
+    const mockOpps = [
+      {
+        id: "1",
+        title: "Software Engineer",
+        location: "Bangalore, India",
+        description: "Join our engineering team to build scalable solutions",
+        tags: ["Remote", "Full-time"],
+        type: "Engineering",
+      },
+      {
+        id: "2",
+        title: "Product Manager",
+        location: "Mumbai, India",
+        description: "Lead product strategy and development",
+        tags: ["Hybrid", "Full-time"],
+        type: "Product",
+      },
+      {
+        id: "3",
+        title: "Data Scientist Intern",
+        location: "Delhi, India",
+        description: "Work on AI/ML projects with our data team",
+        tags: ["On-site", "Internship"],
+        type: "Data Science",
+      },
+    ];
+    
     if (selectedLocation) {
-      const filtered = mockOpportunities.filter((opp) =>
+      const filtered = mockOpps.filter((opp) =>
         opp.location.toLowerCase().includes(selectedLocation.toLowerCase())
       );
       setOpportunities(filtered);
     } else {
-      setOpportunities(mockOpportunities);
+      setOpportunities(mockOpps);
     }
   }, [selectedLocation]);
 

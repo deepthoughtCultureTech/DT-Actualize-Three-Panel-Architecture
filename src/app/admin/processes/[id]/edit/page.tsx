@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
 import Link from "next/link";
 import { Open_Sans } from "next/font/google";
+import { Video } from "lucide-react";
 
 const openSans = Open_Sans({ subsets: ["latin"] });
 
@@ -19,6 +20,14 @@ export default function EditProcessPage() {
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Watch Before You Begin states
+  const [videoEnabled, setVideoEnabled] = useState(false);
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoTitle, setVideoTitle] = useState("");
+  const [videoDescription, setVideoDescription] = useState("");
+  const [isMandatory, setIsMandatory] = useState(false);
+  const [videoDuration, setVideoDuration] = useState("");
+
   // ✅ Load existing data
   useEffect(() => {
     async function fetchProcess() {
@@ -30,6 +39,16 @@ export default function EditProcessPage() {
 
         setTitle(res.data.title || "");
         setDescription(res.data.description || "");
+        
+        // Load video configuration if exists
+        if (res.data.watchBeforeYouBegin) {
+          setVideoEnabled(res.data.watchBeforeYouBegin.enabled || false);
+          setVideoUrl(res.data.watchBeforeYouBegin.videoUrl || "");
+          setVideoTitle(res.data.watchBeforeYouBegin.videoTitle || "");
+          setVideoDescription(res.data.watchBeforeYouBegin.videoDescription || "");
+          setIsMandatory(res.data.watchBeforeYouBegin.isMandatory || false);
+          setVideoDuration(res.data.watchBeforeYouBegin.videoDuration || "");
+        }
       } catch (err: any) {
         setErrorMsg(err?.response?.data?.error || "Failed to load process");
       } finally {
@@ -46,11 +65,23 @@ export default function EditProcessPage() {
     return null;
   }, [title]);
 
+  const videoError = useMemo(() => {
+    if (videoEnabled) {
+      if (!videoUrl.trim()) return "Video URL is required when Watch Before You Begin is enabled";
+      if (!videoTitle.trim()) return "Video title is required";
+    }
+    return null;
+  }, [videoEnabled, videoUrl, videoTitle]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
 
     if (titleError) return;
+    if (videoError) {
+      setErrorMsg(videoError);
+      return;
+    }
 
     try {
       setSaving(true);
@@ -60,9 +91,34 @@ export default function EditProcessPage() {
         return;
       }
 
+      const payload: any = {
+        title: title.trim(),
+        description: description.trim(),
+      };
+
+      // Add video configuration if enabled
+      if (videoEnabled) {
+        payload.watchBeforeYouBegin = {
+          enabled: true,
+          videoUrl: videoUrl.trim(),
+          videoTitle: videoTitle.trim(),
+          videoDescription: videoDescription.trim(),
+          isMandatory,
+          videoDuration: videoDuration.trim() || undefined,
+        };
+      } else {
+        payload.watchBeforeYouBegin = {
+          enabled: false,
+          videoUrl: "",
+          videoTitle: "",
+          videoDescription: "",
+          isMandatory: false,
+        };
+      }
+
       await axios.patch(
         `/api/admin/process/${id}`,
-        { title: title.trim(), description: description.trim() },
+        payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -173,6 +229,112 @@ export default function EditProcessPage() {
             <div className="mt-1 text-right text-xs text-slate-400">
               {description.trim().length}/1000
             </div>
+          </div>
+
+          {/* Watch Before You Begin Configuration */}
+          <div className="border-t border-slate-200 pt-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Video className="w-5 h-5 text-blue-600" />
+                <label className="text-sm font-medium text-slate-800">
+                  Watch Before You Begin
+                </label>
+              </div>
+              <button
+                type="button"
+                onClick={() => setVideoEnabled(!videoEnabled)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  videoEnabled ? "bg-blue-600" : "bg-gray-200"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    videoEnabled ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {videoEnabled && (
+              <div className="space-y-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div>
+                  <label htmlFor="videoUrl" className="block text-sm font-medium text-slate-800 mb-1">
+                    Video URL <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    id="videoUrl"
+                    type="url"
+                    placeholder="https://youtube.com/watch?v=... or direct MP4 link"
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Supports YouTube, Vimeo, or direct video file links (MP4, WebM)
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="videoTitle" className="block text-sm font-medium text-slate-800 mb-1">
+                    Video Title <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    id="videoTitle"
+                    type="text"
+                    placeholder="e.g., Introduction to the Process"
+                    value={videoTitle}
+                    onChange={(e) => setVideoTitle(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    maxLength={100}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="videoDescription" className="block text-sm font-medium text-slate-800 mb-1">
+                    Video Description
+                  </label>
+                  <textarea
+                    id="videoDescription"
+                    placeholder="Brief description of what the video covers"
+                    value={videoDescription}
+                    onChange={(e) => setVideoDescription(e.target.value)}
+                    rows={3}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    maxLength={300}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="videoDuration" className="block text-sm font-medium text-slate-800 mb-1">
+                    Video Duration <span className="text-slate-400 font-normal">(optional)</span>
+                  </label>
+                  <input
+                    id="videoDuration"
+                    type="text"
+                    placeholder="e.g., 5:30"
+                    value={videoDuration}
+                    onChange={(e) => setVideoDuration(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Format: MM:SS (e.g., 5:30 for 5 minutes 30 seconds)
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    id="isMandatory"
+                    type="checkbox"
+                    checked={isMandatory}
+                    onChange={(e) => setIsMandatory(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="isMandatory" className="text-sm text-slate-700">
+                    Make this video mandatory (candidates must watch before continuing)
+                  </label>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Actions */}

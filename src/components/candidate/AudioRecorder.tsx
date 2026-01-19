@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Mic, Square, Play, Pause, Trash2, Upload } from "lucide-react";
+import { Mic, Square, Play, Pause, Trash2 } from "lucide-react";
 
 interface AudioRecorderProps {
   fieldId: string;

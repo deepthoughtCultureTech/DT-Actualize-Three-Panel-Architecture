@@ -246,8 +246,6 @@ export default function CreateFieldPage() {
                 "Checkboxes - select multiple options"}
               {type === "audioResponse" && "Allow candidates to record and submit audio responses"}
             </p>
-                "Checkboxes - select multiple options"}
-            </p>
           </div>
 
           {/* Options for Multiple/Single Choice */}

@@ -21,6 +21,14 @@ type Process = {
   status?: string; // "draft" | "published" etc.
   rounds?: Round[];
   createdAt?: string;
+  watchBeforeYouBegin?: {
+    enabled: boolean;
+    videoUrl: string;
+    videoTitle: string;
+    videoDescription: string;
+    isMandatory: boolean;
+    videoDuration?: string;
+  };
 };
 
 function IconCheck(props: React.SVGProps<SVGSVGElement>) {
@@ -84,12 +92,18 @@ export default function PublishProcessPage() {
       )
       : true;
     const roundsHaveTitles = rounds.every((r) => r.title && r.title.trim().length >= 2);
+    
+    // Check video requirement
+    const videoConfig = process?.watchBeforeYouBegin;
+    const videoValid = !videoConfig?.enabled || 
+      (videoConfig.enabled && videoConfig.videoUrl?.trim() && videoConfig.videoTitle?.trim());
 
     return {
       hasTitle,
       hasAtLeastOneRound,
       orderedAscending,
       roundsHaveTitles,
+      videoValid,
     };
   }, [process]);
 
@@ -97,7 +111,8 @@ export default function PublishProcessPage() {
     checks.hasTitle &&
     checks.hasAtLeastOneRound &&
     checks.orderedAscending &&
-    checks.roundsHaveTitles;
+    checks.roundsHaveTitles &&
+    checks.videoValid;
 
   // Publish action
   async function handlePublish() {
@@ -242,6 +257,24 @@ export default function PublishProcessPage() {
                 )}
               </div>
             </li>
+
+            {process.watchBeforeYouBegin?.enabled && (
+              <li className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                {checks.videoValid ? (
+                  <IconCheck className="mt-0.5 h-4 w-4 text-emerald-600" />
+                ) : (
+                  <IconX className="mt-0.5 h-4 w-4 text-rose-600" />
+                )}
+                <div className="text-sm">
+                  <div className="font-medium text-slate-900">Watch Before You Begin video configured</div>
+                  {!checks.videoValid && (
+                    <div className="text-slate-600">
+                      Add a video URL and title before publishing.
+                    </div>
+                  )}
+                </div>
+              </li>
+            )}
           </ul>
         </div>
 
