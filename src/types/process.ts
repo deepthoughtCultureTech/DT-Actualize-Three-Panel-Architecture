@@ -66,6 +66,15 @@ export interface Submission {
   submittedAt: Date;
 }
 
+export interface WatchBeforeYouBegin {
+  enabled: boolean;
+  videoUrl: string; // URL to MP4, YouTube, Vimeo, or hosted link
+  videoTitle: string;
+  videoDescription: string;
+  isMandatory: boolean;
+  videoDuration?: string; // optional, e.g., "5:30"
+}
+
 export interface Process {
   _id?: ObjectId;
   adminId: ObjectId; // owner
@@ -75,4 +84,5 @@ export interface Process {
   submissions?: Submission[];
   createdAt: Date;
   status: "draft" | "published"; // ✅ add this
+  watchBeforeYouBegin?: WatchBeforeYouBegin; // optional video configuration
 }
