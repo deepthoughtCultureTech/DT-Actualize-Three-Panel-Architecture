@@ -13,7 +13,8 @@ type SubType =
   | "longText"
   | "fileUpload"
   | "singleChoice"
-  | "multipleChoice";
+  | "multipleChoice"
+  | "audioResponse";
 
 export default function CreateFieldPage() {
   const params = useParams<{ id: string; roundId: string }>();
@@ -93,6 +94,11 @@ export default function CreateFieldPage() {
           // Store Tiptap JSON as-is
           payload.description = description;
         }
+      }
+
+      // ✅ Auto-set instruction for audio response
+      if (type === "audioResponse") {
+        payload.question = question.trim() || "Please record your audio response and submit.";
       }
 
       // ✅ Add options for choice fields
@@ -217,6 +223,10 @@ export default function CreateFieldPage() {
                 ) {
                   setOptions(["", ""]);
                 }
+                // Auto-populate question for audio response
+                if (e.target.value === "audioResponse") {
+                  setQuestion("Please record your audio response and submit.");
+                }
               }}
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -225,6 +235,7 @@ export default function CreateFieldPage() {
               <option value="fileUpload">File Upload</option>
               <option value="singleChoice">Single Choice</option>
               <option value="multipleChoice">Multiple Choice</option>
+              <option value="audioResponse">Audio Response</option>
             </select>
             <p className="mt-2 text-xs text-slate-500">
               {type === "shortText" && "Single line text input (max 500 chars)"}
@@ -233,6 +244,7 @@ export default function CreateFieldPage() {
               {type === "singleChoice" && "Radio buttons - select one option"}
               {type === "multipleChoice" &&
                 "Checkboxes - select multiple options"}
+              {type === "audioResponse" && "Allow candidates to record and submit audio responses"}
             </p>
           </div>
 

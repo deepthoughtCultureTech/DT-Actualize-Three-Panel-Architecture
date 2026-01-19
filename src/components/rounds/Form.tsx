@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { memo, useCallback, useState, useEffect } from "react";
+import AudioRecorder from "@/components/candidate/AudioRecorder";
 
 interface Field {
   _id: string;
@@ -9,7 +10,8 @@ interface Field {
     | "longText"
     | "fileUpload"
     | "singleChoice"
-    | "multipleChoice";
+    | "multipleChoice"
+    | "audioResponse";
   options?: string[];
 }
 
@@ -29,6 +31,7 @@ interface FieldInputProps {
   isLocked: boolean;
   onChange: (fieldId: string, value: string | string[]) => void;
   onFileUpload: (fieldId: string, file: File) => void;
+  onAudioUpload: (fieldId: string, audioBlob: Blob) => void;
 }
 
 export default function Form({
@@ -64,6 +67,32 @@ export default function Form({
     [onChange, setSaving]
   );
 
+  const handleAudioUpload = useCallback(
+    async (fieldId: string, audioBlob: Blob) => {
+      setSaving?.(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", audioBlob, "audio-response.webm");
+        formData.append("type", "audio");
+
+        const token = localStorage.getItem("token");
+        const res = await fetch("/api/admin/upload", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        if (!res.ok) throw new Error("Audio upload failed");
+        const data = await res.json();
+        onChange(fieldId, data.url);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setSaving?.(false);
+      }
+    },
+    [onChange, setSaving]
+  );
+
   return (
     <motion.div className="w-full h-full bg-white rounded-2xl shadow-lg p-4 flex flex-col">
       <form className="space-y-6">
@@ -76,6 +105,7 @@ export default function Form({
               isLocked={isLocked}
               onChange={onChange}
               onFileUpload={handleFileUpload}
+              onAudioUpload={handleAudioUpload}
             />
           ))}
         </div>
@@ -85,7 +115,7 @@ export default function Form({
 }
 
 const FieldInput = memo<FieldInputProps>(
-  ({ field, value: parentValue, isLocked, onChange, onFileUpload }) => {
+  ({ field, value: parentValue, isLocked, onChange, onFileUpload, onAudioUpload }) => {
     const [value, setValue] = useState<string | string[]>(parentValue);
 
     useEffect(() => {
@@ -141,6 +171,17 @@ const FieldInput = memo<FieldInputProps>(
             rows={6}
             maxLength={5000}
             required
+          />
+        )}
+
+        {/* ✅ Audio Response */}
+        {field.subType === "audioResponse" && (
+          <AudioRecorder
+            fieldId={field._id}
+            value={parentValue as string}
+            isLocked={isLocked}
+            onAudioUpload={onAudioUpload}
+            onDelete={(fieldId) => onChange(fieldId, "")}
           />
         )}
 
